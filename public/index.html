@@ -993,6 +993,7 @@ let workspace = null;
 
 function iniciarBlockly(toolboxBlocks) {
   workspace = Blockly.inject('blocklyDiv', {
+    media: 'https://unpkg.com/blockly@10.4.3/media/',
     toolbox: construirToolbox(toolboxBlocks),
     scrollbars: true,
     // rolar a área de blocos: barras, arrastar o fundo E roda do mouse / touchpad (dois dedos)
