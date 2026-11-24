@@ -1,0 +1,20 @@
+{
+  "name": "python-kids-game-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Testes automatizados do jogo (Playwright + Blockly real)",
+  "scripts": {
+    "test": "node run-all.js",
+    "test:layout": "node suite1_layout.js",
+    "test:mundo2": "node suite2_mundo2.js",
+    "test:codigo": "node suite3_codigo.js",
+    "test:cliques": "node suite4_cliques.js",
+    "test:partida": "node suite5_partida.js",
+    "test:interacao": "node suite6_interacao.js",
+    "test:largura": "node suite7_largura.js"
+  },
+  "devDependencies": {
+    "blockly": "10.4.3",
+    "playwright": "1.56.0"
+  }
+}

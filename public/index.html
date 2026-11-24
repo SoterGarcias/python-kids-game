@@ -1,0 +1,2378 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Jogo para crianças aprenderem a programar: começa com blocos e chega ao Python de verdade, em 24 fases.">
+<meta name="theme-color" content="#FFDE7A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E🤖%3C/text%3E%3C/svg%3E">
+<title>Python para Crianças — aprenda a programar com blocos</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://unpkg.com/blockly@10.4.3/blockly_compressed.js"></script>
+<script src="https://unpkg.com/blockly@10.4.3/msg/en.js"></script>
+
+<style>
+  :root{
+    --sol: #FFDE7A;
+    --grama: #7FD1AE;
+    --rio: #3E7CB1;
+    --coral: #F2603C;
+    --noite: #4B3B54;
+    --papel: #FFF9EC;
+    --sombra: rgba(75,59,84,0.18);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    font-family: 'Nunito', sans-serif;
+    color: var(--noite);
+    background: linear-gradient(180deg, var(--sol) 0%, #FFEFB0 35%, var(--grama) 100%);
+    overflow: hidden;
+  }
+
+  h1, h2, h3, .titulo {
+    font-family: 'Baloo 2', sans-serif;
+    margin: 0;
+  }
+
+  .tela {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+    overflow-y: auto;
+  }
+
+  .escondida { display: none !important; }
+
+  /* ---------- HUD ---------- */
+  .hud {
+    position: absolute;
+    top: 18px;
+    right: 22px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background: var(--papel);
+    padding: 8px 16px;
+    border-radius: 999px;
+    box-shadow: 0 4px 0 var(--sombra);
+    font-weight: 800;
+    font-size: 15px;
+    z-index: 20;
+  }
+  .hud .xp { color: var(--rio); }
+  .hud .estrelas { color: #E0A526; }
+
+  /* ---------- MASCOTE ---------- */
+  .mascote-bloco {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    max-width: 640px;
+  }
+  .mascote {
+    width: 74px; height: 74px;
+    flex: none;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ffffff 0%, var(--rio) 45%, #2c5f85 100%);
+    position: relative;
+    box-shadow: 0 5px 0 var(--sombra);
+  }
+  .mascote::before, .mascote::after {
+    content: "";
+    position: absolute;
+    width: 10px; height: 10px;
+    background: var(--noite);
+    border-radius: 50%;
+    top: 30px;
+  }
+  .mascote::before { left: 20px; }
+  .mascote::after { right: 20px; }
+  .balao {
+    background: var(--papel);
+    border-radius: 18px;
+    padding: 12px 18px;
+    box-shadow: 0 4px 0 var(--sombra);
+    font-weight: 700;
+    font-size: 15.5px;
+    line-height: 1.4;
+    position: relative;
+  }
+  .balao::before {
+    content: "";
+    position: absolute;
+    left: -9px; top: 24px;
+    border-width: 8px 10px 8px 0;
+    border-style: solid;
+    border-color: transparent var(--papel) transparent transparent;
+  }
+
+  /* ================= MAPA DO MUNDO ================= */
+  #tela-mapa { justify-content: flex-start; }
+  .cabecalho-mundo {
+    text-align: center;
+    margin: 10px 0 6px;
+  }
+  .cabecalho-mundo h1 { font-size: 34px; color: var(--noite); }
+  .cabecalho-mundo p { margin: 4px 0 0; font-weight: 700; color: var(--rio); }
+
+  .trilha {
+    flex: 1;
+    width: 100%;
+    max-width: 760px;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 26px;
+    padding: 30px 0 10px;
+    overflow-y: auto;
+  }
+  .fase-no {
+    width: 92px; height: 92px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 30px;
+    font-weight: 700;
+    color: white;
+    border: 5px solid var(--papel);
+    cursor: pointer;
+    box-shadow: 0 6px 0 var(--sombra);
+    transition: transform .15s ease;
+    position: relative;
+  }
+  .fase-no:nth-child(odd) { margin-left: -120px; }
+  .fase-no:nth-child(even) { margin-right: -120px; }
+  .fase-no.disponivel { background: var(--coral); }
+  .fase-no.disponivel:hover { transform: scale(1.08); }
+  .fase-no.bloqueada {
+    background: #cfc6d6;
+    cursor: not-allowed;
+    box-shadow: 0 6px 0 rgba(75,59,84,0.10);
+  }
+  .fase-no.bloqueada::after {
+    content: "🔒";
+    position: absolute;
+    bottom: -6px; right: -6px;
+    font-size: 20px;
+    background: var(--papel);
+    border-radius: 50%;
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 0 var(--sombra);
+  }
+  .rotulo-fase {
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    text-align: center;
+    margin-top: 6px;
+    color: var(--noite);
+  }
+  .no-envoltorio { display: flex; flex-direction: column; align-items: center; }
+  .divisor-mundo {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    color: var(--noite);
+    background: var(--papel);
+    border-radius: 999px;
+    padding: 8px 16px;
+    margin: 6px 0;
+    box-shadow: 0 3px 0 var(--sombra);
+  }
+
+  /* ================= TELA DE FASE ================= */
+  #tela-fase { padding: 16px 20px; }
+  .barra-fase {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .botao-voltar {
+    background: var(--papel);
+    border: none;
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-weight: 800;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer;
+    box-shadow: 0 4px 0 var(--sombra);
+  }
+  .missao-topo { margin-bottom: 12px; }
+
+  .objetivo-chip {
+    align-self: flex-start;
+    background: var(--sol);
+    border-radius: 12px;
+    padding: 8px 14px;
+    font-weight: 700;
+    font-size: 14.5px;
+    margin-bottom: 10px;
+    box-shadow: 0 3px 0 var(--sombra);
+  }
+
+  .item-ajuda-bloco {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: #E7F6EF;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.4;
+    text-align: left;
+  }
+  .item-ajuda-bloco .emoji-ajuda { font-size: 22px; flex: none; }
+  .item-ajuda-bloco b { color: var(--rio); }
+
+  .area-jogo {
+    flex: 1;
+    width: 100%;
+    max-width: 1700px;
+    display: grid;
+    grid-template-columns: minmax(520px, 1fr) minmax(400px, 460px);
+    grid-template-rows: 1fr;
+    gap: 18px;
+    min-height: 420px;
+  }
+
+  #blocklyDiv {
+    background: var(--papel);
+    border-radius: 20px;
+    box-shadow: 0 5px 0 var(--sombra);
+    width: 100%;
+    height: 100%;
+  }
+  /* O Blockly desenha a barra de rolagem rente à borda do container;
+     com overflow:hidden ela ficava cortada pelo cantos arredondados e
+     quase invisível contra o fundo claro. Removemos o corte acima e
+     aumentamos o contraste dela aqui. */
+  #blocklyDiv svg {
+    border-radius: 20px;
+  }
+  #blocklyDiv .blocklyScrollbarHandle {
+    fill: #b9aec2 !important;
+  }
+  #blocklyDiv .blocklyScrollbarHandle:hover {
+    fill: #8f7fa3 !important;
+  }
+  #blocklyDiv .blocklyScrollbarBackground {
+    fill: #efe9f2 !important;
+  }
+
+  .painel-direita {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 0;
+    height: 100%;
+  }
+  .painel-mapa {
+    background: #E7F6EF;
+    border-radius: 20px;
+    box-shadow: 0 5px 0 var(--sombra);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    position: relative;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+  }
+  .painel-codigo {
+    background: #2B2440;
+    border-radius: 20px;
+    box-shadow: 0 5px 0 var(--sombra);
+    padding: 16px 18px;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .rotulo-codigo {
+    color: #C9BEDC;
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: .5px;
+  }
+  #codigo-python {
+    background: #1E1930;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 0;
+    color: #F4F1FA;
+    font-family: 'Courier New', ui-monospace, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 60px;
+  }
+  #console-saida {
+    background: #14101F;
+    border-radius: 12px;
+    padding: 10px 14px;
+    color: #7FE3A6;
+    font-family: 'Courier New', ui-monospace, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-y: auto;
+    min-height: 70px;
+    max-height: 130px;
+  }
+  #console-saida .linha-vazia { color: #6b6480; font-style: italic; }
+  #console-saida .linha-aviso { color: #FFC857; }
+
+  .grade {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(5, 64px);
+    grid-template-rows: repeat(5, 64px);
+    gap: 5px;
+    background: #cfe9db;
+    padding: 10px;
+    border-radius: 14px;
+  }
+  .celula {
+    background: #9FDBB8;
+    border-radius: 8px;
+    position: relative;
+  }
+  .celula.chegada {
+    background: #ffe08a;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+  }
+  .celula.parede {
+    background: #7d6b87;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .celula.portao {
+    background: #d9a05b;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    transition: background .3s ease;
+  }
+  .celula.portao.aberto { background: #9FDBB8; }
+  .celula.item {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  .botao-sino { background: var(--sol); color: var(--noite); }
+  .chip-pontos {
+    margin-top: 10px;
+    background: var(--papel);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-weight: 800;
+    font-size: 14px;
+    box-shadow: 0 3px 0 var(--sombra);
+  }
+  #robo {
+    position: absolute;
+    width: 48px; height: 48px;
+    font-size: 32px;
+    display: flex; align-items: center; justify-content: center;
+    transition: left .35s ease, top .35s ease, transform .35s ease;
+    z-index: 5;
+  }
+  #robo.tremer { animation: tremer .3s; }
+  @keyframes tremer {
+    0%, 100% { transform: translateX(0) rotate(var(--ang, 0deg)); }
+    25% { transform: translateX(-4px) rotate(var(--ang, 0deg)); }
+    75% { transform: translateX(4px) rotate(var(--ang, 0deg)); }
+  }
+
+  .controles {
+    display: flex;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .botao {
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    border: none;
+    border-radius: 14px;
+    padding: 12px 22px;
+    cursor: pointer;
+    box-shadow: 0 5px 0 var(--sombra);
+    transition: transform .1s ease;
+  }
+  .botao:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--sombra); }
+  .botao:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+  .botao-executar { background: var(--rio); color: white; }
+  .botao-limpar { background: var(--papel); color: var(--noite); }
+
+  /* ================= TELA DE FECHAMENTO ================= */
+  #tela-fechamento {
+    justify-content: center;
+    background: rgba(75,59,84,0.55);
+  }
+  .cartao-fechamento {
+    background: var(--papel);
+    border-radius: 26px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 30px 32px 26px;
+    box-shadow: 0 10px 0 var(--sombra);
+    text-align: left;
+  }
+  .fita {
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: .3px;
+    color: var(--rio);
+    margin-bottom: 4px;
+  }
+  .cartao-fechamento h2 { font-size: 26px; margin-bottom: 14px; }
+  .bloco-secao { margin-bottom: 16px; }
+  .bloco-secao .rotulo {
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--coral);
+    margin-bottom: 4px;
+  }
+  .bloco-secao p { margin: 0; font-weight: 600; line-height: 1.5; }
+  .conceito-nome {
+    background: #E7F6EF;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-weight: 700;
+  }
+  .conceito-nome b { color: var(--rio); }
+
+  .linha-premios {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin: 18px 0;
+  }
+  .estrelas-grandes { font-size: 30px; letter-spacing: 4px; }
+  .xp-ganho {
+    background: var(--sol);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-weight: 800;
+    font-family: 'Baloo 2', sans-serif;
+  }
+  .badge-novo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #FFE3D9;
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+  .gancho {
+    font-style: normal;
+    font-weight: 600;
+    color: var(--noite);
+    opacity: .8;
+    font-size: 14px;
+    margin-bottom: 18px;
+  }
+  .acoes-fechamento { display: flex; gap: 12px; }
+
+  /* Telas médias e pequenas (janela meio-tela, tablet, celular): em vez de
+     duas colunas apertadas, os blocos ficam em cima (largura total) e o
+     painel do robô/código vem logo abaixo. A tela rola na vertical. */
+  @media (max-width: 1180px) {
+    .area-jogo {
+      grid-template-columns: 1fr;
+      grid-template-rows: 440px auto;
+      min-height: 0;
+    }
+    .painel-direita { height: auto; }
+    .painel-mapa { flex: none; }
+    .painel-codigo { flex: none; min-height: 400px; }
+  }
+
+  @media (max-width: 760px) {
+    .area-jogo { grid-template-rows: 400px auto; }
+    .grade { grid-template-columns: repeat(5, 44px); grid-template-rows: repeat(5, 44px); }
+    #robo { width: 36px; height: 36px; font-size: 24px; }
+    .fase-no:nth-child(odd) { margin-left: -60px; }
+    .fase-no:nth-child(even) { margin-right: -60px; }
+    /* o XP fica fixo no topo: empurra o conteúdo pra baixo dele, sem sobrepor botões */
+    .hud { top: 8px; right: 10px; padding: 4px 12px; font-size: 13px; }
+    .tela { padding-top: 56px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <span class="xp">⭐ <span id="hud-xp">0</span> XP</span>
+</div>
+
+<!-- ================= TELA 1: MAPA DO MUNDO ================= -->
+<div id="tela-mapa" class="tela">
+  <div class="cabecalho-mundo">
+    <h1>🗺️ Sua Jornada</h1>
+    <p>Escolha uma fase para começar</p>
+  </div>
+  <div class="trilha" id="trilha"></div>
+</div>
+
+<!-- ================= TELA 2: FASE ================= -->
+<div id="tela-fase" class="tela escondida">
+  <div class="barra-fase">
+    <button class="botao-voltar" id="btn-voltar-mapa">← Mapa</button>
+    <button class="botao-voltar" id="btn-ajuda-blocos">❓ O que cada bloco faz?</button>
+  </div>
+
+  <div class="objetivo-chip" id="objetivo-chip">🎯 <b>Objetivo:</b> <span id="objetivo-texto"></span></div>
+
+  <div class="missao-topo mascote-bloco">
+    <div class="mascote"></div>
+    <div class="balao" id="texto-missao">
+      Oi, eu sou o Zig! O robô precisa chegar até a barraca de frutas 🍎.
+      Arraste os blocos de comando para montar o caminho dele!
+    </div>
+  </div>
+
+  <div class="area-jogo">
+    <div id="blocklyDiv"></div>
+    <div class="painel-direita">
+      <div class="painel-mapa" id="painel-mapa">
+        <div class="grade" id="grade"></div>
+      </div>
+      <div class="painel-codigo escondida" id="painel-codigo">
+        <div class="rotulo-codigo">🐍 SEU CÓDIGO EM PYTHON</div>
+        <pre id="codigo-python"># (seu código vai aparecer aqui)</pre>
+        <div class="rotulo-codigo">💻 SAÍDA</div>
+        <div id="console-saida"></div>
+      </div>
+      <div class="controles">
+        <button class="botao botao-executar" id="btn-executar">▶ Executar</button>
+        <button class="botao botao-limpar" id="btn-limpar">Limpar blocos</button>
+        <button class="botao botao-executar escondida" id="btn-terminar-criacao">✅ Terminar minha criação</button>
+      </div>
+      <div class="chip-pontos escondida" id="chip-pontos">🍇 Pontos: <span id="pontos-valor">0</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TELA 3: FECHAMENTO DE FASE ================= -->
+<div id="tela-fechamento" class="tela escondida">
+  <div class="cartao-fechamento">
+    <div class="fita" id="fechamento-fita">FASE CONCLUÍDA</div>
+    <h2 id="fechamento-titulo">O Robotinho chegou até a barraca! 🎉</h2>
+
+    <div class="bloco-secao">
+      <div class="rotulo">O QUE VOCÊ FEZ</div>
+      <p id="fechamento-oquefez"></p>
+    </div>
+
+    <div class="bloco-secao">
+      <div class="rotulo">O QUE ISSO SE CHAMA</div>
+      <p class="conceito-nome" id="fechamento-conceito"></p>
+    </div>
+
+    <div class="linha-premios">
+      <div class="estrelas-grandes" id="fechamento-estrelas"></div>
+      <div class="xp-ganho" id="fechamento-xp"></div>
+    </div>
+    <p id="fechamento-nota-recorde" style="margin:-10px 0 4px;font-size:13px;font-weight:700;opacity:.75;"></p>
+
+    <div class="badge-novo escondida" id="fechamento-badge">
+      🏅 <span id="fechamento-badge-texto"></span>
+    </div>
+
+    <div class="gancho" id="fechamento-gancho"></div>
+
+    <div class="acoes-fechamento">
+      <button class="botao botao-limpar" id="btn-voltar-mapa-2">Voltar ao mapa</button>
+      <button class="botao botao-limpar" id="btn-jogar-de-novo">Jogar de novo</button>
+      <button class="botao botao-executar" id="btn-proxima-fase">Próxima fase →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: O QUE CADA BLOCO FAZ ================= -->
+<div id="modal-ajuda" class="tela escondida" style="background:rgba(75,59,84,0.55); justify-content:center;">
+  <div class="cartao-fechamento" style="max-width:480px;">
+    <div class="fita">GUIA DOS BLOCOS</div>
+    <h2>O que cada bloco faz?</h2>
+    <div id="lista-ajuda-blocos"></div>
+    <div class="acoes-fechamento" style="margin-top:10px;">
+      <button class="botao botao-executar" id="btn-fechar-ajuda">Entendi!</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   ESTADO DO JOGADOR (em memória — sem localStorage)
+   Em produção isso viraria uma chamada a uma API com o
+   perfil salvo no backend, ligado à conta da criança.
+   ========================================================= */
+const jogador = {
+  xp: 0,
+  badges: [],
+};
+
+function atualizarHUD() {
+  document.getElementById('hud-xp').textContent = jogador.xp;
+}
+
+/* =========================================================
+   NAVEGAÇÃO ENTRE TELAS
+   ========================================================= */
+function mostrarTela(id) {
+  document.querySelectorAll('.tela').forEach(t => t.classList.add('escondida'));
+  document.getElementById(id).classList.remove('escondida');
+}
+
+/* =========================================================
+   MAPA DO MUNDO
+   ========================================================= */
+const FASES = [
+  { numero: 1, disponivel: true },
+  { numero: 2, disponivel: false },
+  { numero: 3, disponivel: false },
+  { numero: 4, disponivel: false },
+  { numero: 5, disponivel: false },
+  { numero: 6, disponivel: false },
+  { numero: 7, disponivel: false },
+  { numero: 8, disponivel: false },
+  { numero: 9, disponivel: false },
+  { numero: 10, disponivel: false },
+  { numero: 11, disponivel: false },
+  { numero: 12, disponivel: false },
+  { numero: 13, disponivel: false },
+  { numero: 14, disponivel: false },
+  { numero: 15, disponivel: false },
+  { numero: 16, disponivel: false },
+  { numero: 17, disponivel: false },
+  { numero: 18, disponivel: false },
+  { numero: 19, disponivel: false },
+  { numero: 20, disponivel: false },
+  { numero: 21, disponivel: false },
+  { numero: 22, disponivel: false },
+  { numero: 23, disponivel: false },
+  { numero: 24, disponivel: false },
+];
+
+// Marca em qual fase começa cada mundo, para desenhar divisores na trilha
+const MUNDOS = {
+  2: { primeiraFase: 1, nome: '🏘️ Mundo 2 — Vila dos Blocos' },
+  3: { primeiraFase: 7, nome: '🌉 Mundo 3 — Ponte Híbrida' },
+  4: { primeiraFase: 13, nome: '🌲 Mundo 4 — Floresta do Código' },
+  5: { primeiraFase: 19, nome: '🗼 Mundo 5 — Torre das Funções' },
+};
+
+// Fase que a criança está jogando agora, e o recorde (em estrelas) de
+// cada fase já concluída — usado para só somar XP quando houver melhora.
+let faseAtual = null;
+const melhorEstrelasPorFase = {};
+
+function desbloquearProximaFase(numeroAtual) {
+  const proxima = FASES.find(f => f.numero === numeroAtual + 1);
+  if (proxima && !proxima.disponivel) {
+    proxima.disponivel = true;
+    montarTrilha();
+  }
+}
+
+function montarTrilha() {
+  const trilha = document.getElementById('trilha');
+  trilha.innerHTML = '';
+  FASES.forEach(fase => {
+    const mundo = Object.values(MUNDOS).find(m => m.primeiraFase === fase.numero);
+    if (mundo) {
+      const divisor = document.createElement('div');
+      divisor.className = 'divisor-mundo';
+      divisor.textContent = mundo.nome;
+      trilha.appendChild(divisor);
+    }
+
+    const envoltorio = document.createElement('div');
+    envoltorio.className = 'no-envoltorio';
+
+    const no = document.createElement('div');
+    no.className = 'fase-no ' + (fase.disponivel ? 'disponivel' : 'bloqueada');
+    const estrelasFase = melhorEstrelasPorFase[fase.numero];
+    no.textContent = fase.numero;
+    if (fase.disponivel) {
+      no.addEventListener('click', () => iniciarFase(fase.numero));
+    }
+
+    const rotulo = document.createElement('div');
+    rotulo.className = 'rotulo-fase';
+    if (!fase.disponivel) {
+      rotulo.textContent = 'Bloqueada';
+    } else if (estrelasFase) {
+      rotulo.textContent = 'Fase ' + fase.numero + ' — ' + '⭐'.repeat(estrelasFase);
+    } else {
+      rotulo.textContent = 'Fase ' + fase.numero;
+    }
+
+    envoltorio.appendChild(no);
+    envoltorio.appendChild(rotulo);
+    trilha.appendChild(envoltorio);
+  });
+}
+
+/* =========================================================
+   BLOCKLY — BLOCOS CUSTOMIZADOS (usados por uma ou mais fases)
+   ========================================================= */
+Blockly.Blocks['inicio'] = {
+  init: function () {
+    this.appendDummyInput().appendField('🚩 Começar aqui');
+    this.setNextStatement(true, null);
+    this.setColour('#4B3B54');
+    this.setDeletable(false);
+    this.setMovable(false);
+    this.setTooltip('Todo programa começa por aqui.');
+  }
+};
+
+Blockly.Blocks['mover_frente'] = {
+  init: function () {
+    this.appendDummyInput().appendField('⬆ mover para frente');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour('#3E7CB1');
+    this.setTooltip('O robô anda uma casa para frente.');
+  }
+};
+
+Blockly.Blocks['virar_direita'] = {
+  init: function () {
+    this.appendDummyInput().appendField('↻ virar à direita');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour('#F2603C');
+    this.setTooltip('O robô vira 90° para a direita.');
+  }
+};
+
+Blockly.Blocks['virar_esquerda'] = {
+  init: function () {
+    this.appendDummyInput().appendField('↺ virar à esquerda');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour('#F2603C');
+    this.setTooltip('O robô vira 90° para a esquerda.');
+  }
+};
+
+Blockly.Blocks['repetir_n_vezes'] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField('🔁 repita')
+      .appendField(new Blockly.FieldNumber(4, 1, 10, 1), 'VEZES')
+      .appendField('vezes');
+    this.appendStatementInput('DO');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour('#2E9E6C');
+    this.setTooltip('Repete os blocos de dentro várias vezes, sem precisar copiá-los.');
+  }
+};
+
+Blockly.Blocks['se_entao_senao'] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField('❓ caminho de cima livre?')
+      .appendField(new Blockly.FieldDropdown([['não', 'NAO'], ['sim', 'SIM']]), 'CONDICAO');
+    this.appendStatementInput('ENTAO').appendField('então');
+    this.appendStatementInput('SENAO').appendField('senão');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour('#C1447E');
+    this.setInputsInline(false);
+    this.setTooltip('Só uma das duas partes roda, dependendo da resposta escolhida.');
+  }
+};
+
+Blockly.Blocks['quando_sino'] = {
+  init: function () {
+    this.appendDummyInput().appendField('🔔 quando tocar o sino');
+    this.setNextStatement(true, null);
+    this.setColour('#E0A526');
+    this.setTooltip('Os blocos encaixados aqui embaixo só rodam quando você tocar o sino.');
+  }
+};
+
+Blockly.Blocks['abrir_portao'] = {
+  init: function () {
+    this.appendDummyInput().appendField('🚪 abrir portão');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour('#C97B3D');
+    this.setTooltip('Abre o portão da vila.');
+  }
+};
+
+Blockly.Blocks['pegar_item'] = {
+  init: function () {
+    this.appendDummyInput().appendField('🍇 pegar item');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour('#4CAF7D');
+    this.setTooltip('Pega o item embaixo do robô, se houver um ali.');
+  }
+};
+
+Blockly.Blocks['mostrar_texto'] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField('🗣️ mostrar')
+      .appendField(new Blockly.FieldTextInput('Oi!'), 'TEXTO');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour('#3E7CB1');
+    this.setTooltip('Mostra um texto na tela. Em Python, isso é a função print().');
+  }
+};
+
+Blockly.Blocks['guardar_variavel'] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField('📦 guardar')
+      .appendField(new Blockly.FieldTextInput('Zig'), 'VALOR');
+    this.appendDummyInput()
+      .appendField('na caixinha')
+      .appendField(new Blockly.FieldTextInput('nome'), 'NOME');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour('#4CAF7D');
+    this.setTooltip('Guarda um valor numa variável — uma "caixinha" com nome, para usar depois.');
+  }
+};
+
+Blockly.Blocks['mostrar_variavel'] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField('🗣️ mostrar a caixinha')
+      .appendField(new Blockly.FieldTextInput('nome'), 'NOME');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour('#2E9E6C');
+    this.setTooltip('Mostra na tela o valor guardado numa variável.');
+  }
+};
+
+Blockly.Blocks['perguntar_variavel'] = {
+  init: function () {
+    // duas linhas: bloco mais estreito e mais fácil de ler
+    this.appendDummyInput()
+      .appendField('❓ perguntar')
+      .appendField(new Blockly.FieldTextInput('Qual é o seu nome?'), 'PERGUNTA');
+    this.appendDummyInput()
+      .appendField('e guardar em')
+      .appendField(new Blockly.FieldTextInput('nome'), 'NOME');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour('#8B5E3C');
+    this.setTooltip('Faz uma pergunta de verdade (abre uma caixinha pra você digitar) e guarda a resposta numa variável.');
+  }
+};
+
+Blockly.Blocks['enquanto_python'] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField('🔁 enquanto')
+      .appendField(new Blockly.FieldDropdown([['não', 'NAO'], ['sim', 'SIM']]), 'CONDICAO')
+      .appendField('faça');
+    this.appendStatementInput('DO');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour('#B05C5C');
+    this.setTooltip('Repete os blocos de dentro enquanto a condição for "sim". Cuidado: se nunca virar "não", roda para sempre! (por segurança, o jogo limita a 15 voltas)');
+  }
+};
+
+Blockly.Blocks['definir_funcao'] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField('🔧 criar função')
+      .appendField(new Blockly.FieldTextInput('saudacao'), 'NOME');
+    this.appendStatementInput('DO');
+    this.setColour('#5B8C5A');
+    this.setTooltip('Define uma função: um pedacinho de código com nome, que você pode "chamar" (rodar) quantas vezes quiser, sem copiar e colar os blocos de novo.');
+  }
+};
+
+Blockly.Blocks['chamar_funcao'] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField('▶️ chamar função')
+      .appendField(new Blockly.FieldTextInput('saudacao'), 'NOME');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour('#7BAE7A');
+    this.setTooltip('Roda (chama) uma função que você já criou, usando o nome dela.');
+  }
+};
+
+Blockly.Blocks['criar_lista'] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField('📋 criar lista chamada')
+      .appendField(new Blockly.FieldTextInput('frutas'), 'NOME');
+    this.appendDummyInput()
+      .appendField('com os itens')
+      .appendField(new Blockly.FieldTextInput('maçã, banana, uva'), 'ITENS');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour('#3E7CB1');
+    this.setTooltip('Cria uma lista com vários itens, separados por vírgula.');
+  }
+};
+
+Blockly.Blocks['percorrer_lista'] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField('🔁 mostrar itens da lista')
+      .appendField(new Blockly.FieldTextInput('frutas'), 'NOME');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour('#2E9E6C');
+    this.setTooltip('Mostra, um de cada vez, todos os itens de uma lista.');
+  }
+};
+
+Blockly.Blocks['adicionar_item_lista'] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField('➕ adicionar')
+      .appendField(new Blockly.FieldTextInput('maracujá'), 'VALOR');
+    this.appendDummyInput()
+      .appendField('na lista')
+      .appendField(new Blockly.FieldTextInput('frutas'), 'NOME');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour('#4CAF7D');
+    this.setTooltip('Adiciona um novo item no final de uma lista que já existe.');
+  }
+};
+
+function construirToolbox(tipos) {
+  return { kind: 'flyoutToolbox', contents: tipos.map(t => ({ kind: 'block', type: t })) };
+}
+
+let workspace = null;
+
+function iniciarBlockly(toolboxBlocks) {
+  workspace = Blockly.inject('blocklyDiv', {
+    toolbox: construirToolbox(toolboxBlocks),
+    scrollbars: true,
+    // rolar a área de blocos: barras, arrastar o fundo E roda do mouse / touchpad (dois dedos)
+    move: { scrollbars: true, drag: true, wheel: true },
+    trashcan: true,
+    // Em telas bem estreitas (celular em pé) os blocos começam um pouco menores, pra caber inteiros no menu.
+    zoom: { controls: true, wheel: false, startScale: window.innerWidth < 600 ? 0.65 : 1.0, maxScale: 1.4, minScale: 0.5 },
+    grid: { spacing: 22, length: 2, colour: '#e6e0ea', snap: true },
+  });
+
+  // Bloco de início fixo, já no workspace, não pode ser apagado nem movido
+  const blocoInicio = workspace.newBlock('inicio');
+  blocoInicio.initSvg();
+  blocoInicio.render();
+  blocoInicio.moveBy(24, 24);
+  workspace.inicioId = blocoInicio.id;
+
+  // Mantém o painel "SEU CÓDIGO EM PYTHON" (Mundo 3) sempre sincronizado
+  // com os blocos, em tempo real — é o coração da "ponte híbrida".
+  workspace.addChangeListener(() => atualizarCodigoPython());
+}
+
+/* =========================================================
+   GERADOR DE CÓDIGO PYTHON — traduz a árvore de blocos para
+   texto Python, linha por linha, com indentação (usado a
+   partir do Mundo 3, na "Ponte Híbrida").
+   ========================================================= */
+function gerarPython(blocoInicial, nivel) {
+  const pad = '    '.repeat(nivel);
+  let linhas = [];
+  let atual = blocoInicial;
+  while (atual) {
+    linhas = linhas.concat(gerarLinhaBloco(atual, nivel, pad));
+    atual = atual.getNextBlock();
+  }
+  return linhas;
+}
+
+function gerarLinhaBloco(bloco, nivel, pad) {
+  switch (bloco.type) {
+    case 'mostrar_texto':
+      return [pad + 'print("' + (bloco.getFieldValue('TEXTO') || '') + '")'];
+    case 'guardar_variavel': {
+      const nome = bloco.getFieldValue('NOME') || 'variavel';
+      const valor = bloco.getFieldValue('VALOR') || '';
+      const ehNumero = valor !== '' && !isNaN(Number(valor));
+      return [pad + nome + ' = ' + (ehNumero ? Number(valor) : '"' + valor + '"')];
+    }
+    case 'mostrar_variavel':
+      return [pad + 'print(' + (bloco.getFieldValue('NOME') || 'variavel') + ')'];
+    case 'perguntar_variavel': {
+      const nome = bloco.getFieldValue('NOME') || 'variavel';
+      const pergunta = bloco.getFieldValue('PERGUNTA') || '';
+      return [pad + nome + ' = input("' + pergunta + '")'];
+    }
+    case 'repetir_n_vezes': {
+      const vezes = Number(bloco.getFieldValue('VEZES')) || 0;
+      const corpo = gerarPython(bloco.getInputTargetBlock('DO'), nivel + 1);
+      return [pad + 'for i in range(' + vezes + '):'].concat(corpo.length ? corpo : [pad + '    pass']);
+    }
+    case 'enquanto_python': {
+      const cond = bloco.getFieldValue('CONDICAO') === 'SIM' ? 'True' : 'False';
+      const corpo = gerarPython(bloco.getInputTargetBlock('DO'), nivel + 1);
+      return [pad + 'while ' + cond + ':'].concat(corpo.length ? corpo : [pad + '    pass']);
+    }
+    case 'se_entao_senao': {
+      const cond = bloco.getFieldValue('CONDICAO') === 'SIM' ? 'True' : 'False';
+      const entao = gerarPython(bloco.getInputTargetBlock('ENTAO'), nivel + 1);
+      const senao = gerarPython(bloco.getInputTargetBlock('SENAO'), nivel + 1);
+      let linhas = [pad + 'if ' + cond + ':'].concat(entao.length ? entao : [pad + '    pass']);
+      linhas.push(pad + 'else:');
+      return linhas.concat(senao.length ? senao : [pad + '    pass']);
+    }
+    case 'definir_funcao':
+      // As definições de função são mostradas antes do programa principal
+      // (ver atualizarCodigoPython) — aqui, no meio da sequência, não geram nada.
+      return [];
+    case 'chamar_funcao':
+      return [pad + (bloco.getFieldValue('NOME') || 'funcao') + '()'];
+    case 'criar_lista': {
+      const nome = bloco.getFieldValue('NOME') || 'lista';
+      const itens = (bloco.getFieldValue('ITENS') || '').split(',').map(s => s.trim()).filter(Boolean);
+      return [pad + nome + ' = [' + itens.map(i => '"' + i + '"').join(', ') + ']'];
+    }
+    case 'percorrer_lista': {
+      const nome = bloco.getFieldValue('NOME') || 'lista';
+      return [pad + 'for item in ' + nome + ':', pad + '    print(item)'];
+    }
+    case 'adicionar_item_lista': {
+      const nome = bloco.getFieldValue('NOME') || 'lista';
+      const valor = bloco.getFieldValue('VALOR') || '';
+      return [pad + nome + '.append("' + valor + '")'];
+    }
+    default:
+      return [];
+  }
+}
+
+function atualizarCodigoPython() {
+  const el = document.getElementById('codigo-python');
+  if (!el || !workspace || !workspace.inicioId) return;
+  const inicio = workspace.getBlockById(workspace.inicioId);
+  if (!inicio) return;
+  let linhasFuncoes = [];
+  workspace.getBlocksByType('definir_funcao', false).forEach(def => {
+    const nome = def.getFieldValue('NOME') || 'funcao';
+    const corpo = gerarPython(def.getInputTargetBlock('DO'), 1);
+    linhasFuncoes = linhasFuncoes.concat(['def ' + nome + '():'])
+      .concat(corpo.length ? corpo : ['    pass'])
+      .concat(['']);
+  });
+
+  const linhasPrincipais = gerarPython(inicio.getNextBlock(), 0);
+  const todas = linhasFuncoes.concat(linhasPrincipais);
+  el.textContent = todas.length ? todas.join('\n') : '# (seu código vai aparecer aqui)';
+}
+
+function limparBlocos() {
+  workspace.getAllBlocks(false).forEach(b => {
+    if (b.type !== 'inicio') b.dispose(false);
+  });
+}
+
+function contarBlocosUsados() {
+  return workspace.getAllBlocks(false).filter(b => b.type !== 'inicio').length;
+}
+
+function contarBlocosPorTipo() {
+  const contagem = {};
+  workspace.getAllBlocks(false).forEach(b => {
+    if (b.type === 'inicio') return;
+    contagem[b.type] = (contagem[b.type] || 0) + 1;
+  });
+  return contagem;
+}
+
+/* =========================================================
+   GRADE / TABULEIRO — genérico para todas as fases
+   ========================================================= */
+const TAM_GRADE = 5;
+
+let INICIO_POS = { linha: 4, coluna: 0, direcao: 0 };
+let CHEGADA_POS = null;   // null = fase sem ponto fixo de chegada (ex.: fase livre)
+let PAREDES = [];         // células que bloqueiam passagem, tipo boundary
+let PORTAO = null;        // { linha, coluna } — só passa se portaoAberto
+let portaoAberto = false;
+let ITENS = [];           // [{ linha, coluna, coletado }]
+let itensColetados = 0;
+
+let robo = { linha: INICIO_POS.linha, coluna: INICIO_POS.coluna, direcao: 0 };
+
+// Matriz com o elemento DOM de cada célula, para medir a posição real
+// (em vez de recalcular em pixels "no chute" — isso é o que garante que
+// o robô sempre fique exatamente no mesmo plano da célula/maçã/item,
+// mesmo se o CSS mudar em telas menores).
+let celulasEl = [];
+
+function atualizarChipPontos() {
+  const el = document.getElementById('pontos-valor');
+  if (el) el.textContent = itensColetados;
+}
+
+function montarGrade(gradeConfig) {
+  INICIO_POS = gradeConfig.inicio;
+  CHEGADA_POS = gradeConfig.chegada || null;
+  PAREDES = gradeConfig.paredes || [];
+  PORTAO = gradeConfig.portao || null;
+  portaoAberto = false;
+  ITENS = (gradeConfig.itens || []).map(p => ({ linha: p.linha, coluna: p.coluna, coletado: false }));
+  itensColetados = 0;
+  atualizarChipPontos();
+
+  robo = { linha: INICIO_POS.linha, coluna: INICIO_POS.coluna, direcao: INICIO_POS.direcao || 0 };
+
+  const grade = document.getElementById('grade');
+  grade.innerHTML = '';
+  celulasEl = [];
+  for (let l = 0; l < TAM_GRADE; l++) {
+    const linhaEls = [];
+    for (let c = 0; c < TAM_GRADE; c++) {
+      const celula = document.createElement('div');
+      celula.className = 'celula';
+      if (CHEGADA_POS && l === CHEGADA_POS.linha && c === CHEGADA_POS.coluna) {
+        celula.classList.add('chegada');
+        celula.textContent = '🍎';
+      } else if (PAREDES.some(p => p.linha === l && p.coluna === c)) {
+        celula.classList.add('parede');
+        celula.textContent = '🧱';
+      } else if (PORTAO && PORTAO.linha === l && PORTAO.coluna === c) {
+        celula.classList.add('portao');
+        celula.textContent = '🚪';
+      } else {
+        const item = ITENS.find(it => it.linha === l && it.coluna === c);
+        if (item) {
+          celula.classList.add('item');
+          celula.textContent = '🍇';
+        }
+      }
+      grade.appendChild(celula);
+      linhaEls.push(celula);
+    }
+    celulasEl.push(linhaEls);
+  }
+  const roboEl = document.createElement('div');
+  roboEl.id = 'robo';
+  roboEl.textContent = '🤖';
+  grade.appendChild(roboEl);
+  posicionarRobo(true);
+}
+
+function posicionarRobo(semAnimar) {
+  const roboEl = document.getElementById('robo');
+  const alvo = celulasEl[robo.linha][robo.coluna];
+  // offsetLeft/offsetTop são relativos ao ancestral posicionado mais
+  // próximo — que é #grade (position:relative) — o mesmo container do
+  // robô, então o alinhamento é sempre exato, célula por célula.
+  const x = alvo.offsetLeft + (alvo.offsetWidth - roboEl.offsetWidth) / 2;
+  const y = alvo.offsetTop + (alvo.offsetHeight - roboEl.offsetHeight) / 2;
+  if (semAnimar) roboEl.style.transition = 'none';
+  roboEl.style.left = x + 'px';
+  roboEl.style.top = y + 'px';
+  roboEl.style.setProperty('--ang', robo.direcao + 'deg');
+  roboEl.style.transform = 'rotate(' + robo.direcao + 'deg)';
+  if (semAnimar) requestAnimationFrame(() => { roboEl.style.transition = ''; });
+}
+
+function resetarRobo() {
+  robo = { linha: INICIO_POS.linha, coluna: INICIO_POS.coluna, direcao: INICIO_POS.direcao || 0 };
+  posicionarRobo(true);
+}
+
+/* =========================================================
+   CONTROLE DA EXECUÇÃO — evita rodar duas vezes ao mesmo tempo
+   (clique duplo) e cancela a execução se a criança sair da fase.
+   ========================================================= */
+class ExecCancelada extends Error {}
+let execToken = 0;
+let executando = false;
+
+function definirBotoesOcupados(ocupado) {
+  ['btn-executar', 'btn-terminar-criacao', 'btn-limpar'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.disabled = ocupado;
+  });
+  const ex = document.getElementById('btn-executar');
+  if (ex) ex.textContent = ocupado ? '⏳ Rodando...' : '▶ Executar';
+}
+
+function cancelarExecucao() {
+  execToken++;
+  executando = false;
+  definirBotoesOcupados(false);
+}
+
+// Toda pausa da animação confere se a execução ainda é a "atual"; se a
+// criança saiu da fase no meio, a execução antiga é interrompida aqui.
+function pausa(ms) {
+  const t = execToken;
+  return new Promise((resolve, reject) => {
+    setTimeout(() => (t === execToken ? resolve() : reject(new ExecCancelada())), ms);
+  });
+}
+
+async function moverFrente() {
+  let { linha, coluna, direcao } = robo;
+  if (direcao === 0) linha -= 1;
+  else if (direcao === 90) coluna += 1;
+  else if (direcao === 180) linha += 1;
+  else if (direcao === 270) coluna -= 1;
+
+  const foraDaGrade = linha < 0 || linha >= TAM_GRADE || coluna < 0 || coluna >= TAM_GRADE;
+  const bateuParede = !foraDaGrade && PAREDES.some(p => p.linha === linha && p.coluna === coluna);
+  const bateuPortaoFechado = !foraDaGrade && PORTAO && PORTAO.linha === linha && PORTAO.coluna === coluna && !portaoAberto;
+
+  const roboEl = document.getElementById('robo');
+  if (foraDaGrade || bateuParede || bateuPortaoFechado) {
+    roboEl.classList.add('tremer');
+    await pausa(300);
+    roboEl.classList.remove('tremer');
+    return;
+  }
+  robo.linha = linha;
+  robo.coluna = coluna;
+  posicionarRobo(false);
+  await pausa(380);
+}
+
+async function virar(sentido) {
+  robo.direcao = (robo.direcao + (sentido === 'direita' ? 90 : -90) + 360) % 360;
+  posicionarRobo(false);
+  await pausa(280);
+}
+
+async function pegarItem() {
+  const item = ITENS.find(it => !it.coletado && it.linha === robo.linha && it.coluna === robo.coluna);
+  if (item) {
+    item.coletado = true;
+    itensColetados++;
+    atualizarChipPontos();
+    celulasEl[item.linha][item.coluna].textContent = '';
+    celulasEl[item.linha][item.coluna].classList.remove('item');
+  }
+  await pausa(220);
+}
+
+async function abrirPortao() {
+  if (PORTAO) {
+    portaoAberto = true;
+    const celula = celulasEl[PORTAO.linha][PORTAO.coluna];
+    celula.classList.add('aberto');
+    celula.textContent = '🔓';
+  }
+  await pausa(300);
+}
+
+/* =========================================================
+   CONSOLE / VARIÁVEIS — mundo "código" (Mundo 3, Ponte Híbrida)
+   ========================================================= */
+// O que o programa realmente FEZ na última execução (e não só quais blocos existem):
+// usado para exigir, por exemplo, que a repetição tenha rodado de verdade.
+let execucao = { ramoSe: 0, repeticoes: 0, voltasEnquanto: 0, eventos: 0 };
+function resetarExecucao() {
+  execucao = { ramoSe: 0, repeticoes: 0, voltasEnquanto: 0, eventos: 0 };
+}
+
+let linhasConsole = [];      // só a saída "de verdade" do programa (conta para vencer a fase)
+let saidaConsole = [];       // tudo o que aparece no console, na ordem: { texto, aviso }
+let variaveisPython = {};
+let funcoesDefinidas = {};
+let chamadasFuncaoOk = 0;    // quantas vezes uma função que existe foi realmente chamada
+let variaveisMostradas = new Set(); // nomes de variáveis que foram mostradas com sucesso
+
+function resetarConsoleMundo3() {
+  linhasConsole = [];
+  saidaConsole = [];
+  variaveisPython = {};
+  funcoesDefinidas = {};
+  chamadasFuncaoOk = 0;
+  variaveisMostradas = new Set();
+  atualizarConsoleDOM();
+}
+
+function atualizarConsoleDOM() {
+  const el = document.getElementById('console-saida');
+  if (!el) return;
+  if (!saidaConsole.length) {
+    el.innerHTML = '<span class="linha-vazia">(a saída do seu programa vai aparecer aqui)</span>';
+    return;
+  }
+  const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  el.innerHTML = saidaConsole
+    .map(l => (l.aviso ? '<span class="linha-aviso">' + esc(l.texto) + '</span>' : esc(l.texto)))
+    .join('<br>');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function mostrarTextoConsole(texto, aviso) {
+  // Avisos do jogo (ex.: "função não encontrada") aparecem no console,
+  // mas NÃO contam como saída do programa — assim não dá pra vencer a
+  // fase só com mensagens de erro.
+  if (!aviso) linhasConsole.push(texto);
+  saidaConsole.push({ texto, aviso: !!aviso });
+  atualizarConsoleDOM();
+  await pausa(350);
+}
+
+/* =========================================================
+   INTERPRETADOR — genérico: anda pela cadeia de blocos a
+   partir de qualquer bloco inicial, e sabe "entrar" em
+   repetições e condicionais recursivamente.
+   ========================================================= */
+async function executarBlocos(blocoInicial) {
+  let atual = blocoInicial;
+  while (atual) {
+    workspace.highlightBlock(atual.id);
+    await executarBloco(atual);
+    workspace.highlightBlock(atual.id, false);
+    atual = atual.getNextBlock();
+  }
+}
+
+async function executarBloco(bloco) {
+  switch (bloco.type) {
+    case 'mover_frente':
+      await moverFrente();
+      break;
+    case 'virar_direita':
+      await virar('direita');
+      break;
+    case 'virar_esquerda':
+      await virar('esquerda');
+      break;
+    case 'pegar_item':
+      await pegarItem();
+      break;
+    case 'abrir_portao':
+      await abrirPortao();
+      break;
+    case 'mostrar_texto':
+      await mostrarTextoConsole(bloco.getFieldValue('TEXTO') || '');
+      break;
+    case 'guardar_variavel': {
+      const nomeG = bloco.getFieldValue('NOME') || 'variavel';
+      const valorG = bloco.getFieldValue('VALOR') || '';
+      const numeroG = Number(valorG);
+      variaveisPython[nomeG] = (valorG !== '' && !isNaN(numeroG)) ? numeroG : valorG;
+      await pausa(200);
+      break;
+    }
+    case 'mostrar_variavel': {
+      const nomeVar = bloco.getFieldValue('NOME') || 'variavel';
+      const temValor = Object.prototype.hasOwnProperty.call(variaveisPython, nomeVar);
+      if (temValor) {
+        variaveisMostradas.add(nomeVar);
+        await mostrarTextoConsole(String(variaveisPython[nomeVar]));
+      } else {
+        await mostrarTextoConsole('(a caixinha "' + nomeVar + '" ainda está vazia — confira o nome)', true);
+      }
+      break;
+    }
+    case 'perguntar_variavel': {
+      const nomeP = bloco.getFieldValue('NOME') || 'variavel';
+      const pergunta = bloco.getFieldValue('PERGUNTA') || '';
+      let resposta = '';
+      try {
+        resposta = window.prompt(pergunta) || '';
+      } catch (e) {
+        resposta = '';
+      }
+      if (resposta.trim() === '') {
+        await mostrarTextoConsole('(você não digitou nenhuma resposta — tente de novo)', true);
+      } else {
+        variaveisPython[nomeP] = resposta;
+        await pausa(200);
+      }
+      break;
+    }
+    case 'repetir_n_vezes': {
+      const vezes = Math.max(0, Number(bloco.getFieldValue('VEZES')) || 0);
+      const corpo = bloco.getInputTargetBlock('DO');
+      if (corpo && vezes > 0) execucao.repeticoes += vezes;
+      for (let i = 0; i < vezes; i++) {
+        await executarBlocos(corpo);
+      }
+      break;
+    }
+    case 'enquanto_python': {
+      const condicaoSim = bloco.getFieldValue('CONDICAO') === 'SIM';
+      const corpo = bloco.getInputTargetBlock('DO');
+      if (!condicaoSim) break; // "enquanto não" nunca roda, igual ao while False de verdade
+      // Por segurança (evitar travar o navegador com um loop infinito real),
+      // limitamos a repetição — e avisamos a criança que isso aconteceu.
+      const LIMITE_SEGURANCA = 15;
+      let voltas = 0;
+      while (voltas < LIMITE_SEGURANCA) {
+        if (corpo) execucao.voltasEnquanto++;
+        await executarBlocos(corpo);
+        voltas++;
+      }
+      await mostrarTextoConsole('⚠️ Isso ia rodar para sempre! Parei em ' + LIMITE_SEGURANCA + ' voltas pra não travar o navegador.', true);
+      break;
+    }
+    case 'se_entao_senao': {
+      const condicaoSim = bloco.getFieldValue('CONDICAO') === 'SIM';
+      const ramo = condicaoSim ? bloco.getInputTargetBlock('ENTAO') : bloco.getInputTargetBlock('SENAO');
+      if (ramo) execucao.ramoSe++;
+      await executarBlocos(ramo);
+      break;
+    }
+    case 'chamar_funcao': {
+      const nomeFn = bloco.getFieldValue('NOME') || '';
+      const corpoFn = funcoesDefinidas[nomeFn];
+      if (corpoFn) {
+        chamadasFuncaoOk++;
+        await executarBlocos(corpoFn);
+      } else {
+        await mostrarTextoConsole('(a função "' + nomeFn + '" ainda não foi criada — confira o nome)', true);
+      }
+      break;
+    }
+    case 'criar_lista': {
+      const nomeL = bloco.getFieldValue('NOME') || 'lista';
+      const itensL = (bloco.getFieldValue('ITENS') || '').split(',').map(s => s.trim()).filter(Boolean);
+      variaveisPython[nomeL] = itensL;
+      await pausa(200);
+      break;
+    }
+    case 'percorrer_lista': {
+      const nomeL = bloco.getFieldValue('NOME') || 'lista';
+      const listaAtual = Array.isArray(variaveisPython[nomeL]) ? variaveisPython[nomeL] : [];
+      for (const item of listaAtual) {
+        await mostrarTextoConsole(item);
+      }
+      break;
+    }
+    case 'adicionar_item_lista': {
+      const nomeL = bloco.getFieldValue('NOME') || 'lista';
+      const valorL = bloco.getFieldValue('VALOR') || '';
+      if (!Array.isArray(variaveisPython[nomeL])) variaveisPython[nomeL] = [];
+      variaveisPython[nomeL].push(valorL);
+      await pausa(200);
+      break;
+    }
+    // 'inicio', 'quando_sino' e 'definir_funcao' não fazem nada sozinhos
+    // quando alcançados em sequência — são só pontos de partida/declaração.
+  }
+}
+
+async function executarPrograma() {
+  if (executando) return; // clique duplo: ignora enquanto já está rodando
+  executando = true;
+  definirBotoesOcupados(true);
+  const meuToken = execToken;
+  try {
+    await executarProgramaInterno();
+  } catch (e) {
+    if (!(e instanceof ExecCancelada)) throw e;
+  } finally {
+    if (meuToken === execToken) {
+      executando = false;
+      definirBotoesOcupados(false);
+    }
+  }
+}
+
+async function executarProgramaInterno() {
+  const config = FASES_CONTEUDO[faseAtual];
+  document.getElementById('texto-missao').textContent = config.missao;
+  resetarExecucao();
+
+  if (config.modo === 'codigo') {
+    // Toda vez que "Executar" é clicado, a saída (console) e as
+    // variáveis reiniciam do zero — só o código (os blocos) continua.
+    resetarConsoleMundo3();
+
+    // Registra as funções definidas no workspace ANTES de rodar o
+    // programa principal — assim, uma "chamar função" pode referenciar
+    // qualquer função já criada, não importa onde ela está no workspace.
+    workspace.getBlocksByType('definir_funcao', false).forEach(def => {
+      const nome = def.getFieldValue('NOME') || '';
+      if (nome) funcoesDefinidas[nome] = def.getInputTargetBlock('DO');
+    });
+
+    const blocoInicio = workspace.getBlockById(workspace.inicioId);
+    await executarBlocos(blocoInicio.getNextBlock());
+
+    if (!config.temVitoriaAutomatica) {
+      document.getElementById('texto-missao').textContent =
+        'Ficou bom! Continue ajustando ou clique em "Terminar minha criação" quando estiver pronta.';
+      return;
+    }
+    const venceu = config.checarVitoria({
+      linhasConsole, variaveisPython,
+      chamadasFuncaoOk, execucao,
+      qtdVariaveisMostradas: variaveisMostradas.size,
+      blocosUsados: contarBlocosUsados(),
+      blocosPorTipo: contarBlocosPorTipo(),
+    });
+    if (venceu) {
+      concluirFase();
+    } else {
+      document.getElementById('texto-missao').textContent =
+        config.mensagemRequisito || 'Quase lá! Ajuste os blocos e clique em Executar de novo. 💪';
+    }
+    return;
+  }
+
+  // ---- modo "grade" (Mundo 2): robô, grid, portão, itens ----
+
+  // Toda vez que "Executar" é clicado, a fase reinicia do zero: robô
+  // volta pro início, portão fecha de novo, itens reaparecem — nada
+  // fica "escondido" de uma tentativa anterior.
+  montarGrade(config.grade);
+
+  // Blocos de evento ("🔔 quando tocar o sino") disparam sozinhos, bem
+  // no comecinho de cada execução — é como se o sino tocasse assim que
+  // você aperta Executar.
+  const sinos = workspace.getBlocksByType('quando_sino', false);
+  for (const sino of sinos) {
+    if (sino.getNextBlock()) execucao.eventos++;
+    await executarBlocos(sino.getNextBlock());
+  }
+
+  const blocoInicio = workspace.getBlockById(workspace.inicioId);
+  await executarBlocos(blocoInicio.getNextBlock());
+
+  if (!config.grade.chegada) {
+    document.getElementById('texto-missao').textContent =
+      'Ficou bom! Continue ajustando ou clique em "Terminar minha criação" quando estiver pronta.';
+    return;
+  }
+
+  const chegou = robo.linha === config.grade.chegada.linha && robo.coluna === config.grade.chegada.coluna;
+  const requisitoOk = config.requisitoExtra
+    ? config.requisitoExtra({ blocosPorTipo: contarBlocosPorTipo(), itensColetados, execucao })
+    : true;
+
+  if (chegou && requisitoOk) {
+    concluirFase();
+  } else if (chegou && !requisitoOk) {
+    document.getElementById('texto-missao').textContent =
+      config.mensagemRequisito || 'Você chegou lá, mas ainda falta usar os blocos pedidos no objetivo. Dá uma olhada de novo! 🔎';
+  } else {
+    document.getElementById('texto-missao').textContent =
+      'Quase lá! Ajuste os blocos e clique em Executar de novo. 💪';
+  }
+}
+
+/* =========================================================
+   AJUDA — explica cada bloco disponível, em linguagem simples
+   ========================================================= */
+const EXPLICACAO_BLOCOS = {
+  inicio: { emoji: '🚩', nome: 'Começar aqui', texto: 'É onde todo programa começa. Você encaixa os outros blocos embaixo dele.' },
+  mover_frente: { emoji: '⬆', nome: 'Mover para frente', texto: 'Faz o robô andar uma casinha para frente, na direção que ele está olhando.' },
+  virar_direita: { emoji: '↻', nome: 'Virar à direita', texto: 'Faz o robô virar para o lado direito. Ele não anda, só vira.' },
+  virar_esquerda: { emoji: '↺', nome: 'Virar à esquerda', texto: 'Faz o robô virar para o lado esquerdo. Ele não anda, só vira.' },
+  repetir_n_vezes: { emoji: '🔁', nome: 'Repita X vezes', texto: 'Faz os blocos que estão dentro dele acontecerem várias vezes, sem você precisar colocar um monte de blocos iguais um atrás do outro.' },
+  se_entao_senao: { emoji: '❓', nome: 'Se / então / senão', texto: 'Deixa o robô escolher entre dois caminhos. Só uma das duas partes acontece — nunca as duas juntas.' },
+  quando_sino: { emoji: '🔔', nome: 'Quando tocar o sino', texto: 'Os blocos encaixados aqui dentro só acontecem quando o sino toca — isso acontece sozinho, bem no início, assim que você aperta Executar.' },
+  abrir_portao: { emoji: '🚪', nome: 'Abrir portão', texto: 'Abre o portão que está no caminho do robô, para ele poder passar.' },
+  pegar_item: { emoji: '🍇', nome: 'Pegar item', texto: 'Pega a fruta que está embaixo do robô naquele momento, e soma um ponto.' },
+  mostrar_texto: { emoji: '🗣️', nome: 'Mostrar', texto: 'Mostra um texto na tela. Em Python, isso se chama print() — é como o programa "fala" com a gente.' },
+  guardar_variavel: { emoji: '📦', nome: 'Guardar na caixinha', texto: 'Guarda um valor numa variável (uma caixinha com nome), para você poder usar esse valor depois.' },
+  mostrar_variavel: { emoji: '🗣️', nome: 'Mostrar a caixinha', texto: 'Mostra na tela o valor que está guardado dentro de uma variável.' },
+  perguntar_variavel: { emoji: '❓', nome: 'Perguntar e guardar', texto: 'Faz uma pergunta de verdade (uma caixinha vai abrir pra você digitar a resposta) e guarda o que você respondeu numa variável.' },
+  enquanto_python: { emoji: '🔁', nome: 'Enquanto', texto: 'Repete os blocos de dentro enquanto a resposta for "sim". Se nunca virar "não", roda para sempre — por isso o jogo limita a 15 voltas, pra não travar.' },
+  definir_funcao: { emoji: '🔧', nome: 'Criar função', texto: 'Guarda um pedacinho de código com um nome. Você pode "chamar" esse nome depois, quantas vezes quiser, sem copiar os blocos de novo.' },
+  chamar_funcao: { emoji: '▶️', nome: 'Chamar função', texto: 'Roda uma função que você já criou, usando o nome dela.' },
+  criar_lista: { emoji: '📋', nome: 'Criar lista', texto: 'Cria uma lista com vários itens de uma vez, separados por vírgula — tipo uma lista de compras.' },
+  percorrer_lista: { emoji: '🔁', nome: 'Mostrar itens da lista', texto: 'Mostra, um de cada vez, todos os itens que estão guardados numa lista.' },
+  adicionar_item_lista: { emoji: '➕', nome: 'Adicionar na lista', texto: 'Coloca mais um item no final de uma lista que já existe.' },
+};
+
+function abrirAjuda() {
+  cancelarExecucao();
+  const config = FASES_CONTEUDO[faseAtual];
+  const lista = document.getElementById('lista-ajuda-blocos');
+  lista.innerHTML = '';
+  const tipos = ['inicio', ...config.toolbox];
+  tipos.forEach(tipo => {
+    const info = EXPLICACAO_BLOCOS[tipo];
+    if (!info) return;
+    const item = document.createElement('div');
+    item.className = 'item-ajuda-bloco';
+    item.innerHTML = '<span class="emoji-ajuda">' + info.emoji + '</span>' +
+      '<span><b>' + info.nome + '</b><br>' + info.texto + '</span>';
+    lista.appendChild(item);
+  });
+  mostrarTela('modal-ajuda');
+}
+
+/* =========================================================
+   CONTEÚDO DE CADA FASE DO MUNDO 2 — missão, blocos
+   disponíveis, tabuleiro, pontuação e texto de fechamento.
+   ========================================================= */
+const FASES_CONTEUDO = {
+  1: {
+    missao: 'Oi, eu sou o Zig! O robô precisa chegar até a barraca de frutas 🍎. ' +
+      'Arraste os blocos de comando para montar o caminho dele!',
+    objetivo: 'Levar o robô até a barraca de frutas 🍎',
+    toolbox: ['mover_frente', 'virar_direita', 'virar_esquerda'],
+    temPontos: false,
+    grade: {
+      inicio: { linha: 4, coluna: 0, direcao: 0 },
+      chegada: { linha: 0, coluna: 3 },
+      paredes: [], portao: null, itens: [],
+    },
+    calcularEstrelas: ({ blocosUsados }) => (blocosUsados <= 8 ? 3 : blocosUsados <= 10 ? 2 : 1),
+    badge: 'Primeiro Passo',
+    fechamento: {
+      titulo: 'O Robotinho chegou até a barraca! 🎉',
+      oquefez: ({ blocosUsados }) => 'Você deu instruções, uma por uma, para o robô andar e virar até chegar ' +
+        'na barraca de frutas — usando ' + blocosUsados + ' blocos de comando.',
+      conceito: 'Isso é uma <b>sequência</b> de comandos. Todo programa é feito de instruções ' +
+        'organizadas em sequência, executadas uma depois da outra, na ordem certa.',
+      gancho: 'Na próxima fase, você vai aprender a repetir comandos sem precisar colocá-los um por um.',
+    },
+  },
+
+  2: {
+    missao: 'O caminho até a fruteira é bem reto, mas longo! Use o bloco de repetição (🔁) ' +
+      'para o robô andar sem precisar empilhar um monte de blocos de "mover".',
+    objetivo: 'Levar o robô até a barraca usando o bloco de repetição',
+    toolbox: ['mover_frente', 'virar_direita', 'virar_esquerda', 'repetir_n_vezes'],
+    temPontos: false,
+    grade: {
+      inicio: { linha: 4, coluna: 2, direcao: 0 },
+      chegada: { linha: 0, coluna: 2 },
+      paredes: [], portao: null, itens: [],
+    },
+    requisitoExtra: ({ execucao }) => execucao.repeticoes >= 2,
+    mensagemRequisito: 'Você chegou, mas a missão é usar o bloco de repetição (🔁) pra andar! Tenta de novo. 🔎',
+    calcularEstrelas: ({ blocosUsados }) => (blocosUsados <= 3 ? 3 : blocosUsados <= 5 ? 2 : 1),
+    badge: 'Mestre da Repetição',
+    fechamento: {
+      titulo: 'O robô chegou usando repetição! 🎉',
+      oquefez: () => 'Você usou um bloco de repetição para fazer o robô andar várias vezes ' +
+        'sem precisar colocar um bloco de "mover" atrás do outro.',
+      conceito: 'Isso é um <b>loop</b> (repetição). Em vez de repetir o mesmo bloco várias vezes, ' +
+        'um bloco de repetição faz a mesma coisa acontecer várias vezes usando bem menos blocos.',
+      gancho: 'Na próxima fase, o robô vai reagir a um evento — algo que acontece automaticamente quando o programa começa.',
+    },
+  },
+
+  3: {
+    missao: 'O portão da vila está fechado! Monte um bloco "🔔 quando tocar o sino" com ' +
+      '"🚪 abrir portão" dentro dele, e também os blocos de movimento do robô. ' +
+      'Quando você clicar em Executar, o sino toca sozinho, o portão abre, e o robô pode andar até a barraca.',
+    objetivo: 'Abrir o portão com o bloco de evento e levar o robô até a barraca',
+    toolbox: ['mover_frente', 'virar_direita', 'virar_esquerda', 'quando_sino', 'abrir_portao'],
+    temPontos: false,
+    grade: {
+      inicio: { linha: 4, coluna: 0, direcao: 0 },
+      chegada: { linha: 0, coluna: 0 },
+      // a linha 2 inteira é parede, menos o portão: a única passagem é abrindo o portão
+      paredes: [{ linha: 2, coluna: 1 }, { linha: 2, coluna: 2 }, { linha: 2, coluna: 3 }, { linha: 2, coluna: 4 }],
+      portao: { linha: 2, coluna: 0 }, itens: [],
+    },
+    requisitoExtra: ({ execucao }) => execucao.eventos >= 1,
+    mensagemRequisito: 'Você chegou, mas a missão é abrir o portão usando o bloco de evento "🔔 quando tocar o sino". 🔎',
+    calcularEstrelas: ({ blocosUsados }) => (blocosUsados <= 6 ? 3 : blocosUsados <= 8 ? 2 : 1),
+    badge: 'Tocador de Sinos',
+    fechamento: {
+      titulo: 'O portão abriu e o robô chegou! 🎉',
+      oquefez: () => 'Você criou um bloco de evento que abre o portão sozinho assim que o programa começa, ' +
+        'e também guiou o robô até a barraca.',
+      conceito: 'Isso é um <b>evento</b>: um bloco separado do resto do programa, que roda quando algo ' +
+        'específico acontece — aqui, sempre que você aperta Executar, é como se o sino tivesse tocado ' +
+        'automaticamente antes do resto.',
+      gancho: 'Na próxima fase, o robô vai aprender a tomar decisões sozinho, com blocos "se/senão".',
+    },
+  },
+
+  4: {
+    missao: 'O Zig ouviu dizer que hoje o caminho de CIMA está livre! Configure o bloco "se" ' +
+      'para "sim" e coloque os blocos de movimento dentro do "então" para levar o robô até a fruta.',
+    objetivo: 'Configurar o bloco "se" corretamente e levar o robô até a fruta',
+    toolbox: ['mover_frente', 'virar_direita', 'virar_esquerda', 'se_entao_senao'],
+    temPontos: false,
+    grade: {
+      inicio: { linha: 4, coluna: 2, direcao: 0 },
+      chegada: { linha: 0, coluna: 2 },
+      paredes: [], portao: null, itens: [],
+    },
+    requisitoExtra: ({ execucao }) => execucao.ramoSe >= 1,
+    mensagemRequisito: 'Você chegou, mas a missão é usar o bloco "se": configure ele em "sim" e coloque os movimentos dentro do "então". 🔎',
+    calcularEstrelas: ({ blocosUsados }) => (blocosUsados <= 5 ? 3 : blocosUsados <= 7 ? 2 : 1),
+    badge: 'Caçador de Decisões',
+    fechamento: {
+      titulo: 'O robô escolheu o caminho certo! 🎉',
+      oquefez: () => 'Você configurou o bloco "se" e escolheu qual caminho o robô deveria seguir.',
+      conceito: 'Isso é uma <b>condicional</b> (se/senão). O programa escolhe um caminho diferente ' +
+        'dependendo de uma condição — só uma das partes roda, nunca as duas ao mesmo tempo.',
+      gancho: 'Na próxima fase, você vai conhecer as variáveis coletando itens pelo caminho.',
+    },
+  },
+
+  5: {
+    missao: 'Colete as 3 uvas 🍇 no caminho até a barraca, usando o bloco "pegar item" ' +
+      'sempre que o robô estiver em cima de uma delas!',
+    objetivo: 'Coletar as 3 uvas e chegar até a barraca',
+    toolbox: ['mover_frente', 'virar_direita', 'virar_esquerda', 'pegar_item'],
+    temPontos: true,
+    grade: {
+      inicio: { linha: 4, coluna: 2, direcao: 0 },
+      chegada: { linha: 0, coluna: 2 },
+      paredes: [], portao: null,
+      itens: [{ linha: 3, coluna: 2 }, { linha: 2, coluna: 2 }, { linha: 1, coluna: 2 }],
+    },
+    requisitoExtra: ({ itensColetados }) => itensColetados >= 3,
+    mensagemRequisito: 'Você chegou na barraca, mas ainda faltam uvas! Use o bloco "pegar item" quando o robô estiver em cima de cada uma. 🍇',
+    calcularEstrelas: ({ blocosUsados }) => (blocosUsados <= 7 ? 3 : blocosUsados <= 9 ? 2 : 1),
+    badge: 'Colecionador',
+    fechamento: {
+      titulo: 'Que colheita boa! 🎉',
+      oquefez: ({ itensColetados }) => 'Você guiou o robô coletando ' + itensColetados +
+        ' de 3 uvas no caminho até a barraca.',
+      conceito: 'Essa contagem de pontos é uma <b>variável</b>: uma "caixinha" que guarda um valor ' +
+        'que muda enquanto o programa roda — nesse caso, quantos itens você já coletou.',
+      gancho: 'Na última fase da Vila dos Blocos, você vai criar sua própria cena, usando tudo o que aprendeu até aqui!',
+    },
+  },
+
+  6: {
+    missao: 'Hora do seu próprio desafio! Leve o robô até a barraca final (🍎) — mas dessa vez, o ' +
+      'caminho é por sua conta, e você precisa usar pelo menos um bloco de repetição (🔁) e um bloco ' +
+      'de decisão (❓) em algum lugar dele.',
+    objetivo: 'Chegar até a barraca final usando pelo menos 1 bloco de repetição e 1 de decisão',
+    toolbox: ['mover_frente', 'virar_direita', 'virar_esquerda', 'repetir_n_vezes',
+      'se_entao_senao', 'pegar_item', 'quando_sino', 'abrir_portao'],
+    temPontos: true,
+    grade: {
+      inicio: { linha: 4, coluna: 2, direcao: 0 },
+      chegada: { linha: 0, coluna: 4 },
+      paredes: [], portao: { linha: 2, coluna: 2 },
+      itens: [{ linha: 1, coluna: 4 }, { linha: 3, coluna: 4 }],
+    },
+    requisitoExtra: ({ execucao }) => execucao.repeticoes >= 1 && execucao.ramoSe >= 1,
+    mensagemRequisito: 'Você chegou na barraca, mas ainda falta usar um bloco de repetição E um de decisão no seu caminho. Tenta de novo! 🔎',
+    calcularEstrelas: () => 3,
+    badge: 'Mestre da Vila dos Blocos',
+    fechamento: {
+      fita: 'MUNDO CONCLUÍDO',
+      titulo: 'Sua criação está pronta! 🎉',
+      oquefez: () => 'Você montou seu próprio caminho até a barraca, usando repetição e decisão do seu jeito — ' +
+        'combinando tudo o que aprendeu na Vila dos Blocos.',
+      conceito: 'Isso é o que programadores de verdade fazem: combinam conceitos simples (sequência, ' +
+        'repetição, eventos, condicionais, variáveis) para construir coisas maiores.',
+      gancho: 'Você terminou o Mundo 2! O próximo mundo vai te ensinar Python de verdade, ligando cada bloco desses ao código.',
+    },
+  },
+
+  7: {
+    missao: 'Chegamos na Ponte Híbrida! Agora, cada bloco que você usar vai mostrar o código Python de verdade do ' +
+      'lado. Arraste o bloco "🗣️ mostrar" e veja o que acontece!',
+    objetivo: 'Fazer o Zig mostrar uma mensagem na tela',
+    toolbox: ['mostrar_texto'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: () => 3,
+    checarVitoria: ({ linhasConsole }) => linhasConsole.length >= 1,
+    badge: 'Primeira Mensagem',
+    fechamento: {
+      titulo: 'Sua primeira mensagem apareceu na tela! 🎉',
+      oquefez: () => 'Você usou o bloco "mostrar" e viu o código Python de verdade sendo gerado ao lado, e a mensagem aparecendo no console.',
+      conceito: 'O bloco "mostrar" gera a função <b>print()</b> em Python — é o comando mais usado para um programa mostrar algo na tela.',
+      gancho: 'Na próxima fase, você vai ver o que acontece quando um programa tem várias linhas.',
+    },
+  },
+
+  8: {
+    missao: 'Um programa de verdade quase sempre tem várias linhas! Adicione pelo menos 3 blocos de "mostrar" com ' +
+      'mensagens diferentes, um embaixo do outro.',
+    objetivo: 'Mostrar pelo menos 3 mensagens diferentes',
+    toolbox: ['mostrar_texto'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: ({ linhasConsole }) => Math.min(linhasConsole.length, 3),
+    checarVitoria: ({ linhasConsole }) => new Set(linhasConsole).size >= 3,
+    mensagemRequisito: 'Quase lá! Precisam ser 3 mensagens DIFERENTES — troque o texto de cada bloco "mostrar". 🔎',
+    badge: 'Contador de Histórias',
+    fechamento: {
+      titulo: 'Três linhas, três mensagens! 🎉',
+      oquefez: ({ linhasConsole }) => 'Seu programa mostrou ' + linhasConsole.length + ' mensagens, uma de cada vez, na ordem em que os blocos estavam empilhados.',
+      conceito: 'Cada linha do seu código roda uma de cada vez, de cima para baixo — é a mesma <b>sequência</b> que você já conhecia no Mundo 2, só que agora em código de verdade.',
+      gancho: 'Na próxima fase, você vai aprender a guardar informações numa variável.',
+    },
+  },
+
+  9: {
+    missao: 'Em Python, guardamos valores em variáveis. Use o bloco "📦 guardar" para criar uma variável, e depois ' +
+      '"🗣️ mostrar a caixinha" para ver o valor que você guardou.',
+    objetivo: 'Guardar um valor numa variável e mostrar ele na tela',
+    toolbox: ['mostrar_texto', 'guardar_variavel', 'mostrar_variavel'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: () => 3,
+    checarVitoria: ({ variaveisPython, qtdVariaveisMostradas }) => Object.keys(variaveisPython).length >= 1 && qtdVariaveisMostradas >= 1,
+    mensagemRequisito: 'Quase lá! Guarde um valor numa caixinha e mostre ESSA mesma caixinha (o nome precisa ser igual nos dois blocos). 🔎',
+    badge: 'Guardião de Variáveis',
+    fechamento: {
+      titulo: 'Você guardou e mostrou uma variável! 🎉',
+      oquefez: () => 'Você criou uma variável com o bloco "guardar" e depois usou "mostrar a caixinha" para ver esse valor na tela.',
+      conceito: 'Isso é uma <b>variável</b> em Python de verdade: <code>nome = "valor"</code> guarda algo, e <code>print(nome)</code> mostra o que está guardado.',
+      gancho: 'Na próxima fase, o robô... digo, o código, vai aprender a tomar decisões com "if" e "else".',
+    },
+  },
+
+  10: {
+    missao: 'Vamos usar o "se/senão" de um jeito novo: agora o código do lado mostra "if" e "else" de verdade! ' +
+      'Configure a condição para "sim" e coloque um bloco de "mostrar" dentro do "então".',
+    objetivo: 'Usar o bloco se/senão para mostrar uma mensagem',
+    toolbox: ['mostrar_texto', 'se_entao_senao'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: () => 3,
+    checarVitoria: ({ linhasConsole, execucao }) => execucao.ramoSe >= 1 && linhasConsole.length >= 1,
+    mensagemRequisito: 'Quase lá! Use o bloco "se/senão" com a condição em "sim" e um bloco de "mostrar" dentro do "então". 🔎',
+    badge: 'Mente Lógica',
+    fechamento: {
+      titulo: 'Sua condição funcionou! 🎉',
+      oquefez: () => 'Você configurou o bloco "se/senão" e viu, no código, só a parte escolhida rodando de verdade.',
+      conceito: 'Em Python, "se" vira a palavra <b>if</b>, e "senão" vira <b>else</b>. O código só roda a parte cuja condição bateu — nunca as duas.',
+      gancho: 'Na próxima fase, você vai repetir mensagens usando um "for" de verdade.',
+    },
+  },
+
+  11: {
+    missao: 'Ao invés de colocar vários blocos de "mostrar" iguais, use o bloco de repetição para mostrar uma ' +
+      'mensagem 3 vezes de uma só vez — no código, isso vira um "for".',
+    objetivo: 'Usar o bloco de repetição para mostrar uma mensagem 3 vezes',
+    toolbox: ['mostrar_texto', 'repetir_n_vezes'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: ({ blocosUsados }) => (blocosUsados <= 2 ? 3 : blocosUsados <= 4 ? 2 : 1),
+    checarVitoria: ({ linhasConsole, execucao }) => execucao.repeticoes >= 3 && linhasConsole.length >= 3,
+    mensagemRequisito: 'Quase lá! Use o bloco de repetição com um "mostrar" dentro, pra mensagem aparecer 3 vezes ou mais. 🔎',
+    badge: 'Mestre do For',
+    fechamento: {
+      titulo: 'For funcionando! 🎉',
+      oquefez: () => 'Você usou o bloco de repetição para gerar várias linhas de saída sem precisar empilhar um bloco de "mostrar" atrás do outro.',
+      conceito: 'Em Python, repetir vira um <b>for</b> — <code>for i in range(3):</code> roda o que está indentado embaixo dele, 3 vezes seguidas.',
+      gancho: 'Na última fase da Ponte Híbrida, você vai criar seu próprio miniprograma, usando tudo o que aprendeu!',
+    },
+  },
+
+  12: {
+    missao: 'Essa fase é sua! Monte um miniprograma que guarde pelo menos uma variável, mostre pelo menos 2 ' +
+      'mensagens na tela, e use um bloco de repetição ou de decisão em algum lugar. Quando estiver assim, clique ' +
+      'em "Terminar minha criação".',
+    objetivo: 'Guardar 1 variável, mostrar 2+ mensagens, e usar repetição ou decisão',
+    toolbox: ['mostrar_texto', 'guardar_variavel', 'mostrar_variavel', 'se_entao_senao', 'repetir_n_vezes'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    mostrarBotaoTerminar: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: () => 3,
+    checarVitoria: ({ variaveisPython, linhasConsole, execucao }) =>
+      Object.keys(variaveisPython).length >= 1 &&
+      linhasConsole.length >= 2 &&
+      (execucao.repeticoes >= 1 || execucao.ramoSe >= 1),
+    mensagemRequisito: 'Quase lá! Confira: pelo menos 1 variável guardada, 2 mensagens mostradas, e um bloco de repetição ou decisão. 🔎',
+    badge: 'Mestre da Ponte Híbrida',
+    fechamento: {
+      fita: 'MUNDO CONCLUÍDO',
+      titulo: 'Seu miniprograma está pronto! 🎉',
+      oquefez: () => 'Você combinou mensagens, variáveis, decisões e repetição para criar seu próprio programa em Python.',
+      conceito: 'Isso é o que programadores de verdade fazem todos os dias: combinam <b>print()</b>, <b>variáveis</b>, <b>if/else</b> e <b>for</b> para construir programas maiores.',
+      gancho: 'Você terminou o Mundo 3! No próximo mundo, a Floresta do Código, você vai aprender a perguntar coisas de verdade pro computador e repetir enquanto quiser.',
+    },
+  },
+
+  13: {
+    missao: 'Bem-vindo à Floresta do Código! Aqui os números contam de verdade. Use o bloco "📦 guardar" com um número ' +
+      '(tipo sua idade) e depois "🗣️ mostrar a caixinha" pra ver ele na tela — repare que, no código, o número não fica entre aspas.',
+    objetivo: 'Guardar um número numa variável e mostrar ele na tela',
+    toolbox: ['guardar_variavel', 'mostrar_variavel'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: () => 3,
+    checarVitoria: ({ variaveisPython, qtdVariaveisMostradas }) => Object.keys(variaveisPython).length >= 1 && qtdVariaveisMostradas >= 1,
+    mensagemRequisito: 'Quase lá! Guarde um número numa caixinha e mostre ESSA mesma caixinha (o nome precisa ser igual). 🔎',
+    badge: 'Números e Textos',
+    fechamento: {
+      titulo: 'Seu número apareceu na tela! 🎉',
+      oquefez: () => 'Você guardou um número numa variável e mostrou ele na tela — e viu que, no código, números não ficam entre aspas como os textos.',
+      conceito: 'Python guarda <b>tipos</b> diferentes de valor: texto (entre aspas, como "Zig") e número (sem aspas, como 8). O jeito de escrever no código muda dependendo do tipo.',
+      gancho: 'Na próxima fase, você vai fazer o computador perguntar algo de verdade pra você.',
+    },
+  },
+
+  14: {
+    missao: 'Agora o bloco "❓ perguntar" vai abrir uma caixinha de verdade pra você digitar uma resposta! Configure a ' +
+      'pergunta, execute, e responda quando a caixinha aparecer.',
+    objetivo: 'Perguntar o nome da pessoa e guardar a resposta',
+    toolbox: ['perguntar_variavel', 'mostrar_variavel'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: () => 3,
+    checarVitoria: ({ variaveisPython, qtdVariaveisMostradas }) => Object.keys(variaveisPython).length >= 1 && qtdVariaveisMostradas >= 1,
+    mensagemRequisito: 'Quase lá! Use "perguntar" e depois "mostrar a caixinha" com o mesmo nome da variável. 🔎',
+    badge: 'Pergunte e Guarde',
+    fechamento: {
+      titulo: 'Você recebeu uma resposta de verdade! 🎉',
+      oquefez: () => 'Você usou o bloco "perguntar", respondeu numa caixinha de verdade, e depois mostrou a resposta guardada na tela.',
+      conceito: 'Isso é a função <b>input()</b> em Python: ela pausa o programa, espera a pessoa digitar algo, e guarda a resposta numa variável.',
+      gancho: 'Na próxima fase, você vai usar a resposta pra dar boas-vindas personalizadas.',
+    },
+  },
+
+  15: {
+    missao: 'Pergunte o nome da pessoa, e use a resposta pra dar boas-vindas personalizadas — um bloco "mostrar" com ' +
+      '"Bem-vindo(a)," e um bloco "mostrar a caixinha" com o nome, um embaixo do outro.',
+    objetivo: 'Perguntar o nome e usar a resposta para dar boas-vindas personalizadas',
+    toolbox: ['perguntar_variavel', 'mostrar_variavel', 'mostrar_texto'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: ({ linhasConsole }) => (linhasConsole.length >= 2 ? 3 : linhasConsole.length >= 1 ? 2 : 1),
+    checarVitoria: ({ variaveisPython, qtdVariaveisMostradas, linhasConsole }) => Object.keys(variaveisPython).length >= 1 && qtdVariaveisMostradas >= 1 && linhasConsole.length >= 2,
+    mensagemRequisito: 'Quase lá! Pergunte o nome, mostre uma mensagem de boas-vindas E mostre a caixinha com o nome. 🔎',
+    badge: 'Boas-Vindas Personalizadas',
+    fechamento: {
+      titulo: 'Boas-vindas personalizadas prontas! 🎉',
+      oquefez: () => 'Você combinou "perguntar" com "mostrar" pra criar uma mensagem que muda dependendo da resposta da pessoa.',
+      conceito: 'Combinar <b>input()</b> com <b>print()</b> é a base de quase todo programa interativo — perguntar algo, guardar, e usar a resposta depois.',
+      gancho: 'Na próxima fase, você vai conhecer o "enquanto" — um jeito de repetir sem saber quantas vezes vai ser.',
+    },
+  },
+
+  16: {
+    missao: 'Agora um jeito novo de repetir: o bloco "🔁 enquanto". Configure ele para "sim" e coloque um bloco de ' +
+      '"mostrar" dentro — veja o que acontece quando uma repetição nunca teria fim!',
+    objetivo: 'Usar o bloco "enquanto" para repetir uma mensagem',
+    toolbox: ['mostrar_texto', 'enquanto_python'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: () => 3,
+    checarVitoria: ({ linhasConsole, execucao }) => execucao.voltasEnquanto >= 1 && linhasConsole.length >= 1,
+    mensagemRequisito: 'Quase lá! Use o bloco "enquanto" configurado para "sim", com um "mostrar" dentro. 🔎',
+    badge: 'Domador do Enquanto',
+    fechamento: {
+      titulo: 'Você domou o "enquanto"! 🎉',
+      oquefez: () => 'Você usou o bloco "enquanto" configurado pra "sim" — e viu o jogo avisar que isso rodaria pra sempre, por segurança.',
+      conceito: 'Em Python, isso é o <b>while</b>. Um <code>while True:</code> de verdade nunca para sozinho — trava o programa! Por isso todo "enquanto" precisa de um jeito de virar "não" em algum momento.',
+      gancho: 'Na próxima fase, você vai montar um cartão de apresentação, juntando tudo o que aprendeu na Floresta.',
+    },
+  },
+
+  17: {
+    missao: 'Hora de juntar tudo! Pergunte o nome e a cor favorita da pessoa, guarde as duas respostas, e mostre as ' +
+      'duas na tela — como um cartão de apresentação.',
+    objetivo: 'Perguntar seu nome e sua cor favorita, e mostrar as duas coisas',
+    toolbox: ['perguntar_variavel', 'mostrar_variavel', 'mostrar_texto'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: ({ linhasConsole }) => (linhasConsole.length >= 2 ? 3 : linhasConsole.length >= 1 ? 2 : 1),
+    checarVitoria: ({ variaveisPython, qtdVariaveisMostradas, linhasConsole }) => Object.keys(variaveisPython).length >= 2 && qtdVariaveisMostradas >= 2 && linhasConsole.length >= 2,
+    mensagemRequisito: 'Quase lá! Faça 2 perguntas com nomes de caixinha diferentes (nome e cor) e mostre as DUAS caixinhas. 🔎',
+    badge: 'Cartão de Apresentação',
+    fechamento: {
+      titulo: 'Seu cartão de apresentação ficou pronto! 🎉',
+      oquefez: () => 'Você perguntou duas coisas diferentes, guardou cada uma numa variável, e mostrou as duas na tela.',
+      conceito: 'Programas de verdade quase sempre fazem várias perguntas e guardam várias variáveis ao mesmo tempo — cada uma com seu próprio nome.',
+      gancho: 'Na última fase da Floresta do Código, você vai criar seu próprio programa, usando tudo o que aprendeu!',
+    },
+  },
+
+  18: {
+    missao: 'Essa fase é toda sua! Monte um programa que faça pelo menos uma pergunta de verdade (❓), mostre ' +
+      'pelo menos 2 mensagens, e use repetição, decisão ou o bloco "enquanto" em algum lugar. Quando estiver ' +
+      'assim, clique em "Terminar minha criação".',
+    objetivo: 'Fazer 1+ pergunta, mostrar 2+ mensagens, e usar repetição, decisão ou "enquanto"',
+    toolbox: ['mostrar_texto', 'guardar_variavel', 'mostrar_variavel', 'perguntar_variavel', 'se_entao_senao', 'repetir_n_vezes', 'enquanto_python'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    mostrarBotaoTerminar: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: () => 3,
+    checarVitoria: ({ linhasConsole, blocosPorTipo, execucao }) =>
+      (blocosPorTipo['perguntar_variavel'] || 0) >= 1 &&
+      linhasConsole.length >= 2 &&
+      (execucao.repeticoes >= 1 || execucao.ramoSe >= 1 || execucao.voltasEnquanto >= 1),
+    mensagemRequisito: 'Quase lá! Confira: pelo menos 1 pergunta feita, 2 mensagens mostradas, e um bloco de repetição, decisão ou "enquanto". 🔎',
+    badge: 'Mestre da Floresta do Código',
+    fechamento: {
+      fita: 'MUNDO CONCLUÍDO',
+      titulo: 'Seu programa da Floresta está pronto! 🎉',
+      oquefez: () => 'Você combinou perguntas, variáveis, decisões e repetições pra criar um programa inteiro seu, do jeito que você quis.',
+      conceito: 'Isso é programar de verdade: escolher, entre tudo o que você já sabe, o que usar pra resolver o que você mesmo decidiu criar.',
+      gancho: 'Você terminou o Mundo 4! No próximo mundo, a Torre das Funções, você vai aprender a criar suas próprias funções e guardar várias coisas numa lista só.',
+    },
+  },
+
+  19: {
+    missao: 'Bem-vindo à Torre das Funções! Uma função é um pedacinho de código com nome. Use "🔧 criar função" ' +
+      'com um bloco "mostrar" dentro, e depois "▶️ chamar função" DUAS vezes seguidas — o mesmo código roda duas vezes, ' +
+      'sem você copiar nada. Importante: o nome da função e o nome na chamada precisam ser iguais!',
+    objetivo: 'Criar 1 função com uma mensagem dentro e chamá-la 2 vezes',
+    toolbox: ['definir_funcao', 'chamar_funcao', 'mostrar_texto'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: () => 3,
+    checarVitoria: ({ linhasConsole, blocosPorTipo, chamadasFuncaoOk }) =>
+      (blocosPorTipo['definir_funcao'] || 0) >= 1 &&
+      chamadasFuncaoOk >= 2 &&
+      linhasConsole.length >= 2,
+    mensagemRequisito: 'Quase lá! Confira: 1 função criada com uma mensagem dentro, chamada 2 vezes, e os nomes iguais. 🔎',
+    badge: 'Criador de Funções',
+    fechamento: {
+      titulo: 'Sua função rodou duas vezes! 🎉',
+      oquefez: () => 'Você criou uma função uma única vez e a chamou duas vezes — o mesmo código rodou duas vezes sem você precisar copiar os blocos.',
+      conceito: 'Em Python, isso é <b>def</b>: <code>def saudacao():</code> cria a função, e <code>saudacao()</code> chama ela. Funções servem pra reaproveitar código sem repetir.',
+      gancho: 'Na próxima fase, você vai chamar uma função de dentro de uma repetição.',
+    },
+  },
+
+  20: {
+    missao: 'Agora vamos juntar duas ideias que você já conhece! Crie uma função com uma mensagem dentro, e chame ela ' +
+      'de dentro de um bloco de repetição (🔁) pra ela rodar várias vezes de uma vez só.',
+    objetivo: 'Chamar uma função de dentro de uma repetição, para ela rodar 3 vezes',
+    toolbox: ['definir_funcao', 'chamar_funcao', 'mostrar_texto', 'repetir_n_vezes'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: ({ blocosUsados }) => (blocosUsados <= 4 ? 3 : blocosUsados <= 6 ? 2 : 1),
+    checarVitoria: ({ linhasConsole, blocosPorTipo, chamadasFuncaoOk, execucao }) =>
+      (blocosPorTipo['definir_funcao'] || 0) >= 1 &&
+      chamadasFuncaoOk >= 3 &&
+      execucao.repeticoes >= 3 &&
+      linhasConsole.length >= 3,
+    mensagemRequisito: 'Quase lá! Confira: 1 função criada, 1 bloco de repetição, a chamada da função dentro da repetição, e 3 mensagens na saída. 🔎',
+    badge: 'Função em Repetição',
+    fechamento: {
+      titulo: 'Função e repetição juntas! 🎉',
+      oquefez: () => 'Você chamou uma função de dentro de uma repetição, fazendo o mesmo código rodar várias vezes com pouquíssimos blocos.',
+      conceito: 'Combinar <b>for</b> com <b>funções</b> é uma das ideias mais poderosas da programação: você escreve o código uma vez, dá um nome pra ele, e manda rodar quantas vezes precisar.',
+      gancho: 'Na próxima fase, você vai conhecer as listas — jeito de guardar várias coisas numa variável só.',
+    },
+  },
+
+  21: {
+    missao: 'Uma lista guarda várias coisas numa variável só — tipo uma lista de compras! Use "📋 criar lista" com ' +
+      'alguns itens separados por vírgula, e depois "🔁 mostrar itens da lista" pra ver todos na tela, um por um. ' +
+      'O nome da lista precisa ser igual nos dois blocos!',
+    objetivo: 'Criar uma lista com 3 itens e mostrar cada um deles na tela',
+    toolbox: ['criar_lista', 'percorrer_lista'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: () => 3,
+    checarVitoria: ({ linhasConsole, variaveisPython }) => {
+      const listas = Object.values(variaveisPython).filter(v => Array.isArray(v));
+      return listas.length >= 1 && listas.some(l => l.length >= 3) && linhasConsole.length >= 3;
+    },
+    mensagemRequisito: 'Quase lá! Confira: uma lista com pelo menos 3 itens (separados por vírgula), e o bloco "mostrar itens da lista" usando o mesmo nome da lista. 🔎',
+    badge: 'Mestre das Listas',
+    fechamento: {
+      titulo: 'Sua lista apareceu inteirinha! 🎉',
+      oquefez: ({ linhasConsole }) => 'Você criou uma lista e usou o bloco de percorrer para mostrar cada um dos ' + linhasConsole.length + ' itens, um de cada vez.',
+      conceito: 'Em Python, uma <b>lista</b> usa colchetes: <code>frutas = ["maçã", "banana", "uva"]</code>. E o <code>for item in frutas:</code> passa por cada item, um de cada vez.',
+      gancho: 'Na próxima fase, você vai aprender a fazer a lista crescer, adicionando itens novos.',
+    },
+  },
+
+  22: {
+    missao: 'Listas podem crescer! Crie uma lista, depois use "➕ adicionar" pra colocar mais itens nela, e no final ' +
+      'mostre tudo com "mostrar itens da lista". A lista final precisa ter pelo menos 4 itens no total.',
+    objetivo: 'Criar uma lista, adicionar pelo menos 2 itens novos nela e mostrar todos (4+ itens no final)',
+    toolbox: ['criar_lista', 'adicionar_item_lista', 'percorrer_lista'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: () => 3,
+    checarVitoria: ({ linhasConsole, variaveisPython, blocosPorTipo }) => {
+      const listas = Object.values(variaveisPython).filter(v => Array.isArray(v));
+      return (blocosPorTipo['adicionar_item_lista'] || 0) >= 2 &&
+        listas.some(l => l.length >= 4) &&
+        linhasConsole.length >= 4;
+    },
+    mensagemRequisito: 'Quase lá! Confira: use "adicionar" pelo menos 2 vezes na mesma lista (mesmo nome!), e termine com 4+ itens na saída. 🔎',
+    badge: 'Lista em Crescimento',
+    fechamento: {
+      titulo: 'Sua lista cresceu! 🎉',
+      oquefez: ({ linhasConsole }) => 'Você começou com uma lista pequena, adicionou itens novos nela, e mostrou os ' + linhasConsole.length + ' itens no final.',
+      conceito: 'Em Python, <code>frutas.append("uva")</code> coloca um item novo no final da lista. Listas são "vivas": podem crescer enquanto o programa roda.',
+      gancho: 'Na próxima fase, você vai juntar função, lista e repetição num programa só.',
+    },
+  },
+
+  23: {
+    missao: 'Hora de combinar! Monte um programinha que use uma função, uma lista e um bloco de repetição, tudo no ' +
+      'mesmo programa. Uma ideia: uma função que mostra uma mensagem, uma lista de itens, e uma repetição que chama a função.',
+    objetivo: 'Usar 1 função, 1 lista e 1 repetição no mesmo programa, mostrando 3+ linhas',
+    toolbox: ['definir_funcao', 'chamar_funcao', 'criar_lista', 'percorrer_lista', 'repetir_n_vezes', 'mostrar_texto'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: () => 3,
+    checarVitoria: ({ linhasConsole, blocosPorTipo, chamadasFuncaoOk, execucao }) =>
+      (blocosPorTipo['definir_funcao'] || 0) >= 1 &&
+      chamadasFuncaoOk >= 1 &&
+      (blocosPorTipo['criar_lista'] || 0) >= 1 &&
+      execucao.repeticoes >= 1 &&
+      linhasConsole.length >= 3,
+    mensagemRequisito: 'Quase lá! Confira: 1 função (e uma chamada dela), 1 lista, 1 repetição, e pelo menos 3 linhas na saída. 🔎',
+    badge: 'Combinador',
+    fechamento: {
+      titulo: 'Tudo funcionando junto! 🎉',
+      oquefez: () => 'Você combinou função, lista e repetição no mesmo programa — cada peça fazendo uma parte do trabalho.',
+      conceito: 'Programas de verdade são assim: pedaços pequenos (funções, listas, repetições) encaixados uns nos outros pra resolver problemas maiores.',
+      gancho: 'Na última fase da Torre das Funções, você vai criar o seu próprio programa, com regras claras.',
+    },
+  },
+
+  24: {
+    missao: 'Desafio final da Torre! Crie um programa que tenha pelo menos uma função (que você chama), uma lista ' +
+      '(que você mostra), e uma pergunta de verdade pra pessoa. Quando estiver assim, clique em "Terminar minha criação".',
+    objetivo: 'Criar 1 função (chamada), 1 lista (mostrada) e fazer 1 pergunta, com 4+ linhas na saída',
+    toolbox: ['definir_funcao', 'chamar_funcao', 'criar_lista', 'percorrer_lista', 'adicionar_item_lista',
+      'perguntar_variavel', 'mostrar_variavel', 'mostrar_texto', 'repetir_n_vezes', 'se_entao_senao'],
+    modo: 'codigo',
+    temPontos: false,
+    temVitoriaAutomatica: true,
+    mostrarBotaoTerminar: true,
+    grade: { inicio: { linha: 0, coluna: 0, direcao: 0 }, chegada: null, paredes: [], portao: null, itens: [] },
+    calcularEstrelas: () => 3,
+    checarVitoria: ({ linhasConsole, blocosPorTipo, chamadasFuncaoOk }) =>
+      (blocosPorTipo['definir_funcao'] || 0) >= 1 &&
+      chamadasFuncaoOk >= 1 &&
+      (blocosPorTipo['criar_lista'] || 0) >= 1 &&
+      (blocosPorTipo['percorrer_lista'] || 0) >= 1 &&
+      (blocosPorTipo['perguntar_variavel'] || 0) >= 1 &&
+      linhasConsole.length >= 4,
+    mensagemRequisito: 'Quase lá! Confira: 1 função (e uma chamada), 1 lista mostrada, 1 pergunta feita, e pelo menos 4 linhas na saída. 🔎',
+    badge: 'Mestre da Torre das Funções',
+    fechamento: {
+      fita: 'MUNDO CONCLUÍDO',
+      titulo: 'Você dominou a Torre das Funções! 🎉',
+      oquefez: () => 'Você montou um programa completo com função, lista e pergunta — usando as ideias mais importantes da programação.',
+      conceito: 'Funções, listas, perguntas e repetições são os tijolos de quase todo programa de verdade. Daqui pra frente, é só construir coisas maiores com eles.',
+      gancho: 'Você terminou o Mundo 5! Parabéns — você já programa em Python de verdade, usando blocos que viram código.',
+    },
+  },
+};
+
+/* =========================================================
+   FLUXO DA FASE
+   ========================================================= */
+function iniciarFase(numero) {
+  cancelarExecucao();
+  faseAtual = numero;
+  const config = FASES_CONTEUDO[numero];
+
+  mostrarTela('tela-fase');
+  document.getElementById('texto-missao').textContent = config.missao;
+
+  if (!workspace) {
+    iniciarBlockly(config.toolbox);
+  } else {
+    limparBlocos();
+    workspace.updateToolbox(construirToolbox(config.toolbox));
+  }
+
+  document.getElementById('objetivo-texto').textContent = config.objetivo;
+  document.getElementById('chip-pontos').classList.toggle('escondida', !config.temPontos);
+
+  const mostrarTerminar = config.modo === 'codigo' ? !!config.mostrarBotaoTerminar : !config.grade.chegada;
+  document.getElementById('btn-terminar-criacao').classList.toggle('escondida', !mostrarTerminar);
+
+  document.getElementById('painel-mapa').classList.toggle('escondida', config.modo === 'codigo');
+  document.getElementById('painel-codigo').classList.toggle('escondida', config.modo !== 'codigo');
+
+  if (config.modo === 'codigo') {
+    resetarConsoleMundo3();
+    atualizarCodigoPython();
+  } else {
+    montarGrade(config.grade);
+  }
+  if (workspace) Blockly.svgResize(workspace);
+}
+
+function concluirFase() {
+  const config = FASES_CONTEUDO[faseAtual];
+  const blocosUsados = contarBlocosUsados();
+  const ctx = {
+    blocosUsados, itensColetados, linhasConsole, variaveisPython,
+    chamadasFuncaoOk, execucao, qtdVariaveisMostradas: variaveisMostradas.size,
+    blocosPorTipo: contarBlocosPorTipo(),
+  };
+  const estrelas = config.calcularEstrelas(ctx);
+
+  // XP só aumenta se essa tentativa superou o recorde já registrado
+  // nessa fase — repetir com pontuação igual ou pior não altera o XP.
+  const recordeAnterior = melhorEstrelasPorFase[faseAtual] || 0;
+  const melhorou = estrelas > recordeAnterior;
+  const xpGanho = melhorou ? (estrelas - recordeAnterior) * 20 : 0;
+
+  if (melhorou) {
+    jogador.xp += xpGanho;
+    melhorEstrelasPorFase[faseAtual] = estrelas;
+  }
+  atualizarHUD();
+  desbloquearProximaFase(faseAtual);
+  montarTrilha(); // sempre atualiza o mapa (estrelas novas, inclusive na última fase)
+
+  const primeiraVezNestaFase = !!config.badge && jogador.badges.indexOf(config.badge) === -1;
+  if (primeiraVezNestaFase) jogador.badges.push(config.badge);
+
+  document.getElementById('fechamento-fita').textContent = config.fechamento.fita || 'FASE CONCLUÍDA';
+  document.getElementById('fechamento-titulo').textContent = config.fechamento.titulo;
+  document.getElementById('fechamento-oquefez').textContent = config.fechamento.oquefez(ctx);
+  document.getElementById('fechamento-conceito').innerHTML = config.fechamento.conceito;
+  document.getElementById('fechamento-estrelas').textContent = '⭐'.repeat(estrelas) + '☆'.repeat(3 - estrelas);
+
+  const notaRecorde = document.getElementById('fechamento-nota-recorde');
+  if (melhorou) {
+    document.getElementById('fechamento-xp').textContent = '+' + xpGanho + ' XP';
+    notaRecorde.textContent = recordeAnterior > 0 ? 'Novo recorde nessa fase! 🎉' : '';
+  } else if (recordeAnterior === 0 && estrelas === 0) {
+    document.getElementById('fechamento-xp').textContent = '+0 XP';
+    notaRecorde.textContent = 'Tente coletar as uvas no caminho para ganhar pontos! 🍇';
+  } else {
+    document.getElementById('fechamento-xp').textContent = '+0 XP';
+    notaRecorde.textContent = 'Seu recorde nessa fase continua sendo ' + '⭐'.repeat(recordeAnterior) +
+      ' — pontos não mudam ao repetir com o mesmo resultado ou pior.';
+  }
+
+  const badgeBox = document.getElementById('fechamento-badge');
+  if (primeiraVezNestaFase) {
+    document.getElementById('fechamento-badge-texto').textContent = 'Nova conquista: ' + config.badge;
+    badgeBox.classList.remove('escondida');
+  } else {
+    badgeBox.classList.add('escondida');
+  }
+
+  document.getElementById('fechamento-gancho').textContent = config.fechamento.gancho;
+
+  const existeProxima = !!FASES.find(f => f.numero === faseAtual + 1);
+  document.getElementById('btn-proxima-fase').classList.toggle('escondida', !existeProxima);
+
+  mostrarTela('tela-fechamento');
+}
+
+/* =========================================================
+   EVENTOS
+   ========================================================= */
+document.getElementById('btn-executar').addEventListener('click', executarPrograma);
+document.getElementById('btn-limpar').addEventListener('click', () => { cancelarExecucao(); limparBlocos(); });
+document.getElementById('btn-terminar-criacao').addEventListener('click', executarPrograma);
+document.getElementById('btn-ajuda-blocos').addEventListener('click', abrirAjuda);
+document.getElementById('btn-fechar-ajuda').addEventListener('click', () => {
+  mostrarTela('tela-fase');
+  // a execução foi cancelada ao abrir a ajuda: deixa o mundo limpo, do começo
+  const cfg = FASES_CONTEUDO[faseAtual];
+  if (cfg.modo === 'codigo') resetarConsoleMundo3(); else montarGrade(cfg.grade);
+  document.getElementById('texto-missao').textContent = cfg.missao;
+  if (workspace) Blockly.svgResize(workspace);
+});
+document.getElementById('btn-voltar-mapa').addEventListener('click', () => { cancelarExecucao(); mostrarTela('tela-mapa'); });
+document.getElementById('btn-voltar-mapa-2').addEventListener('click', () => { cancelarExecucao(); mostrarTela('tela-mapa'); });
+document.getElementById('btn-proxima-fase').addEventListener('click', () => {
+  const proximo = faseAtual + 1;
+  if (FASES.find(f => f.numero === proximo)) iniciarFase(proximo);
+});
+document.getElementById('btn-jogar-de-novo').addEventListener('click', () => {
+  // Mostra a tela ANTES de reconstruir a grade/console: reposicionar um
+  // elemento dentro de um container ainda escondido (display:none) mede
+  // tudo como zero e é o que deixava o robô "grudado" no lugar errado.
+  // Importante: NÃO chama limparBlocos() aqui — os blocos que a criança
+  // já montou continuam lá, só o mundo (robô/portão/itens ou console)
+  // reinicia.
+  mostrarTela('tela-fase');
+  const config = FASES_CONTEUDO[faseAtual];
+  if (config.modo === 'codigo') {
+    resetarConsoleMundo3();
+  } else {
+    montarGrade(config.grade);
+  }
+  document.getElementById('texto-missao').textContent = config.missao;
+  if (workspace) Blockly.svgResize(workspace);
+});
+window.addEventListener('resize', () => {
+  if (celulasEl.length) posicionarRobo(true);
+  if (workspace) Blockly.svgResize(workspace);
+});
+
+/* =========================================================
+   INÍCIO
+   ========================================================= */
+montarTrilha();
+atualizarHUD();
+mostrarTela('tela-mapa');
+</script>
+</body>
+</html>
